@@ -5,8 +5,8 @@
 
  The MIT License (MIT)
 
- Copyright © 2000-2020 Ake Hedman, Grodans Paradis AB
- <info@grodansparadis.com>
+ Copyright © 2000-2021 Ake Hedman, the VSCP project
+ <info@vscp.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -229,7 +229,6 @@ extern "C"
 
     typedef struct
     {
-
         uint8_t filter_priority; /* Priority  */
         uint8_t mask_priority;
 
@@ -325,7 +324,7 @@ extern "C"
 /* Packet frame format type = 0                         */
 /*      without byte0 and CRC                           */
 /*      total frame size is 1 + 34 + 2 + data-length    */
-#define VSCP_MULTICAST_PACKET0_HEADER_LENGTH 35
+#define VSCP_MULTICAST_PACKET0_HEADER_LENGTH      35
 
 /* Multicast packet ordinals */
 #define VSCP_MULTICAST_PACKET0_POS_PKTTYPE        0
@@ -394,7 +393,22 @@ extern "C"
 #define VSPP_BOOTLOADER_NXP1      0x20 /* NXP/Philips/Freescale algorithm 0 */
 #define VSCP_BOOTLOADER_ST        0x30 /* ST STR algorithm 0 */
 #define VSCP_BOOTLOADER_FREESCALE 0x40 /* Freescale Kinetics algorithm 0 */
-#define VSCP_BOOTLOADER_NONE      0xff
+#define VSCP_BOOTLOADER_USER0     0xf0 /* Used defined bootloader 0 */
+#define VSCP_BOOTLOADER_NONE1     0xf1 /* Used defined bootloader 1 */
+#define VSCP_BOOTLOADER_NONE2     0xf2 /* Used defined bootloader 2 */
+#define VSCP_BOOTLOADER_NONE3     0xf3 /* Used defined bootloader 3 */
+#define VSCP_BOOTLOADER_NONE4     0xf4 /* Used defined bootloader 4 */
+#define VSCP_BOOTLOADER_NONE5     0xf5 /* Used defined bootloader 5 */
+#define VSCP_BOOTLOADER_NONE6     0xf6 /* Used defined bootloader 6 */
+#define VSCP_BOOTLOADER_NONE7     0xf7 /* Used defined bootloader 7 */
+#define VSCP_BOOTLOADER_NONE8     0xf8 /* Used defined bootloader 8 */
+#define VSCP_BOOTLOADER_NONE9     0xf9 /* Used defined bootloader 9 */
+#define VSCP_BOOTLOADER_NONE10    0xfa /* Used defined bootloader 10 */
+#define VSCP_BOOTLOADER_NONE11    0xfb /* Used defined bootloader 11 */
+#define VSCP_BOOTLOADER_NONE12    0xfc /* Used defined bootloader 12 */
+#define VSCP_BOOTLOADER_NONE13    0xfd /* Used defined bootloader 13 */
+#define VSCP_BOOTLOADER_NONE14    0xfe /* Used defined bootloader 14 */
+#define VSCP_BOOTLOADER_NONE15    0xff /* No bootloader available */
 
 /*          * * * Data Coding for VSCP packets * * *   */
 
@@ -547,7 +561,7 @@ extern "C"
 #define VSCP_ERROR_ERROR             -1 /* Error */
 #define VSCP_ERROR_CHANNEL           7  /* Invalid channel */
 #define VSCP_ERROR_FIFO_EMPTY        8  /* FIFO is empty */
-#define VSCP_ERROR_FIFO_FULL         9  /* FIFI is full */
+#define VSCP_ERROR_FIFO_FULL         9  /* FIFO is full */
 #define VSCP_ERROR_FIFO_SIZE         10 /* FIFO size error */
 #define VSCP_ERROR_FIFO_WAIT         11 /* FIFO wait failed */
 #define VSCP_ERROR_GENERIC           12 /* Generic error */
@@ -581,14 +595,39 @@ extern "C"
     44 /* Requested item (remote variable) is unknown */
 #define VSCP_ERROR_ALREADY_DEFINED      45 /* The name is already in use. */
 #define VSCP_ERROR_WRITE_ERROR          46 /* Error when writing data */
+#define VSCP_ERROR_WRITE                46 /* Error when writing data */
 #define VSCP_ERROR_STOPPED              47 /* Operation stopped or aborted */
 #define VSCP_ERROR_INVALID_POINTER      48 /* Pointer with invalid value */
 #define VSCP_ERROR_INVALID_PERMISSION   49 /* Not allowed to do that */
 #define VSCP_ERROR_INVALID_PATH         50 /* Invalid path (permissions) */
 #define VSCP_ERROR_ERRNO                51 /* General error, errno variable holds error */
-#define VSCP_ERROR_INTERUPTED           52 /* Interupted by signal or other cause */
+#define VSCP_ERROR_INTERRUPTED          52 /* Interrupted by signal or other cause */
 #define VSCP_ERROR_MISSING              53 /* Value, paramter or something else is missing */ 
 #define VSCP_ERROR_NOT_CONNECTED        54 /* There is no connection */
+#define VSCP_ERROR_READ_ONLY            55 /* Item (variable) is read only */  
+#define VSCP_ERROR_INVALID_TYPE         56 /* Item (variable) is of wrong type */
+#define VSCP_ERROR_PERMISSION           57 /* Does hot have permission to do that */
+#define VSCP_ERROR_INVALID_SYNTAX       58 /* Syntax is invalid */
+#define VSCP_ERROR_INDEX_OOB            59 /* Index is out of bounds */
+
+/*!
+    HLO (High Level Object) type (bits 7,6,5,4)
+*/
+
+#define VSCP_HLO_TYPE_UTF8                   0
+#define VSCP_HLO_TYPE_XML                    1
+#define VSCP_HLO_TYPE_JSON                   2
+#define VSCP_HLO_TYPE_BASE64                 3
+#define VSCP_HLO_TYPE_USER_DEFINED           15
+
+/*!
+    HLO (High Level Object) encryption (bits 3,2,1,0)
+*/
+
+#define VSCP_HLO_ENCRYPTION_NONE             0
+#define VSCP_HLO_ENCRYPTION_AES128           1
+#define VSCP_HLO_ENCRYPTION_AES192           2
+#define VSCP_HLO_ENCRYPTION_AES256           3
 
 /*
     Template for VSCP XML event data
@@ -607,8 +646,8 @@ datetime,vscpHead,vscpObId,vscpDateTime,vscpTimeStamp,vscpClass,vscpType,vscpGui
      vscpData="0x48,0x34,0x35,0x2E,0x34,0x36,0x34" />
 
  */
-#define VSCP_XML_EVENT_TEMPLATE                                                \
-    "<event "                                                                  \
+#define VSCP_XML_EVENT_TEMPLATE                                                    \
+    "<event "                                                                      \
     "vscpHead=\"%d\" "                                                             \
     "vscpObId=\"%lu\" "                                                            \
     "vscpDateTime=\"%s\" "                                                         \
@@ -636,8 +675,8 @@ datetime,vscpHead,vscpObId,vscpDateTime,vscpTimeStamp,vscpClass,vscpType,vscpGui
     "vscpNote": "This is some text"
 }
 */
-#define VSCP_JSON_EVENT_TEMPLATE                                               \
-    "{\n"                                                                      \
+#define VSCP_JSON_EVENT_TEMPLATE                                                   \
+    "{\n"                                                                          \
     "\"vscpHead\": %d,\n"                                                          \
     "\"vscpObId\":  %lu,\n"                                                        \
     "\"vscpDateTime\": \"%s\",\n"                                                  \
@@ -693,7 +732,7 @@ note: This is a note <br>
     "From GUID: %s<br>"                                                        \
     "</p>"                                                                     \
     "<p>"                                                                      \
-    "vscpHead: %d <br>"                                                            \
+    "vscpHead: %d <br>"                                                        \
     "<p>"                                                                      \
     "DateTime: %s <br>"                                                        \
     "</p>"                                                                     \
@@ -723,6 +762,9 @@ note: This is a note <br>
     "\"filter_type\": %d,\n"                                                   \
     "\"filter_guid\": \"%s\",\n"                                               \
     "}"
+
+// MQTT message formats
+enum enumMqttMsgFormat {jsonfmt,xmlfmt,strfmt,binfmt,autofmt};
 
 #ifdef __cplusplus
 }
