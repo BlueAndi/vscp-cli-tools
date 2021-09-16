@@ -42,7 +42,7 @@ BIN= vscpExamplePc
 INCLUDES= -I. \
 		-Ivscp_user \
 		-I../common \
-		-I../common/vscp-bootloder/src \
+		-I../common/vscp-bootloader/src \
 		-I../common/vscphelper \
 		-I../common/vscp-framework/src \
 		-I../common/vscp-framework/src/events
@@ -102,7 +102,7 @@ SOURCES= main.c \
 		../common/vscp-framework/src/events/vscp_evt_wireless.c
 
 # Include all source pathes here like ../src1:../src2
-VPATH= ../common:../common/vscphelper:../common/vscp-framework/src:../common/vscp-framework/src/events:vscp_user:../common/vscp-bootloder/src
+VPATH= ../common:../common/vscphelper:../common/vscp-framework/src:../common/vscp-framework/src/events:vscp_user:../common/vscp-bootloader/src
 
 # Determine build type
 ifeq ($(MAKECMDGOALS),debug)

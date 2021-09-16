@@ -41,18 +41,19 @@ BIN= vscpProgrammerPc
 # General include directories
 INCLUDES= -I. \
 		-I../common \
+		-I ../common/vscp-bootloader/src \
 		-I../common/vscphelper
 
 # Sources
 SOURCES= main.c \
 		intelHexParser.c \
-		../common/crc16ccitt.c \
+		../common/vscp-bootloader/src/crc16ccitt.c \
 		../common/cmdLineParser.c \
 		../common/log.c \
 		../common/platform.c
 
 # Include all source pathes here like ../src1:../src2
-VPATH= ../common
+VPATH= ../common:../common/vscp-bootloader/src
 
 # Determine build type
 ifeq ($(MAKECMDGOALS),debug)
