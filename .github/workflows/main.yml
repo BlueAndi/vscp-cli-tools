@@ -25,20 +25,20 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Build logger (debug)
+      - name: Build logger (release)
         run: |
           cd ./logger
-          make debug
+          make release
           cd ..
 
-      - name: Build nodeSim (debug)
+      - name: Build nodeSim (release)
         run: |
           cd ./nodeSim
-          make debug
+          make release
           cd ..
 
-      - name: Build programmer (debug)
+      - name: Build programmer (release)
         run: |
           cd ./programmer
-          make debug
+          make release
           cd ..
