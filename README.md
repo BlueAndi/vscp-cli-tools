@@ -10,7 +10,7 @@ Command line interface tools used to maintain or simulate VSCP nodes.
 - [VSCP](#vscp)
 - [Tools](#tools)
 - [How To Build](#how-to-build)
-  - [Prerequistes](#prerequistes)
+  - [Prerequisite](#prerequisite)
     - [Linux](#linux)
     - [Windows](#windows)
   - [1 Clone The Repository](#1-clone-the-repository)
@@ -38,7 +38,7 @@ More information can be found on the main site http://www.vscp.org
 
 # How To Build
 
-## Prerequistes
+## Prerequisite
 
 ### Linux
 
