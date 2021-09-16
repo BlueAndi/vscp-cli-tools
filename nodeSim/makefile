@@ -42,10 +42,10 @@ BIN= vscpExamplePc
 INCLUDES= -I. \
 		-Ivscp_user \
 		-I../common \
-		-I../../common/vscphelper \
-		-I../../vscp \
-		-I../../vscp/bootloader \
-		-I../../vscp/events
+		-I../common/vscp-bootloder/src \
+		-I../common/vscphelper \
+		-I../common/vscp-framework/src \
+		-I../common/vscp-framework/src/events
 
 # Sources
 SOURCES= main.c \
@@ -62,47 +62,47 @@ SOURCES= main.c \
 		vscp_user/vscp_timer.c \
 		vscp_user/dm_std_xml.c \
 		vscp_user/dm_ext_xml.c \
-		../common/crc16ccitt.c \
 		../common/pc/cmdLineParser.c \
 		../common/pc/log.c \
 		../common/pc/platform.c \
-		../../vscp/vscp_core.c \
-		../../vscp/vscp_data_coding.c \
-		../../vscp/vscp_dev_data.c \
-		../../vscp/vscp_dm.c \
-		../../vscp/vscp_dm_ng.c \
-		../../vscp/vscp_logger.c \
-		../../vscp/vscp_ps.c \
-		../../vscp/vscp_transport.c \
-		../../vscp/vscp_util.c \
-		../../vscp/bootloader/vscp_bootloader.c \
-		../events/vscp_evt_alarm.c \
-		../events/vscp_evt_aol.c \
-		../events/vscp_evt_configuration.c \
-		../events/vscp_evt_control.c \
-		../events/vscp_evt_data.c \
-		../events/vscp_evt_diagnostic.c \
-		../events/vscp_evt_display.c \
-		../events/vscp_evt_error.c \
-		../events/vscp_evt_gnss.c \
-		../events/vscp_evt_information.c \
-		../events/vscp_evt_ir.c \
-		../events/vscp_evt_log.c \
-		../events/vscp_evt_measurement.c \
-		../events/vscp_evt_measurement32.c \
-		../events/vscp_evt_measurement64.c \
-		../events/vscp_evt_measurezone.c \
-		../events/vscp_evt_multimedia.c \
-		../events/vscp_evt_phone.c \
-		../events/vscp_evt_protocol.c \
-		../events/vscp_evt_security.c \
-		../events/vscp_evt_setvaluezone.c \
-		../events/vscp_evt_weather.c \
-		../events/vscp_evt_weather_forecast.c \
-		../events/vscp_evt_wireless.c
+		../common/vscp-bootloder/src/crc16ccitt.c \
+		../common/vscp-bootloder/src/vscp_bootloader.c \
+		../common/vscp-framework/src/vscp_core.c \
+		../common/vscp-framework/src/vscp_data_coding.c \
+		../common/vscp-framework/src/vscp_dev_data.c \
+		../common/vscp-framework/src/vscp_dm.c \
+		../common/vscp-framework/src/vscp_dm_ng.c \
+		../common/vscp-framework/src/vscp_logger.c \
+		../common/vscp-framework/src/vscp_ps.c \
+		../common/vscp-framework/src/vscp_transport.c \
+		../common/vscp-framework/src/vscp_util.c \
+		../common/vscp-framework/src/events/vscp_evt_alarm.c \
+		../common/vscp-framework/src/events/vscp_evt_aol.c \
+		../common/vscp-framework/src/events/vscp_evt_configuration.c \
+		../common/vscp-framework/src/events/vscp_evt_control.c \
+		../common/vscp-framework/src/events/vscp_evt_data.c \
+		../common/vscp-framework/src/events/vscp_evt_diagnostic.c \
+		../common/vscp-framework/src/events/vscp_evt_display.c \
+		../common/vscp-framework/src/events/vscp_evt_error.c \
+		../common/vscp-framework/src/events/vscp_evt_gnss.c \
+		../common/vscp-framework/src/events/vscp_evt_information.c \
+		../common/vscp-framework/src/events/vscp_evt_ir.c \
+		../common/vscp-framework/src/events/vscp_evt_log.c \
+		../common/vscp-framework/src/events/vscp_evt_measurement.c \
+		../common/vscp-framework/src/events/vscp_evt_measurement32.c \
+		../common/vscp-framework/src/events/vscp_evt_measurement64.c \
+		../common/vscp-framework/src/events/vscp_evt_measurezone.c \
+		../common/vscp-framework/src/events/vscp_evt_multimedia.c \
+		../common/vscp-framework/src/events/vscp_evt_phone.c \
+		../common/vscp-framework/src/events/vscp_evt_protocol.c \
+		../common/vscp-framework/src/events/vscp_evt_security.c \
+		../common/vscp-framework/src/events/vscp_evt_setvaluezone.c \
+		../common/vscp-framework/src/events/vscp_evt_weather.c \
+		../common/vscp-framework/src/events/vscp_evt_weather_forecast.c \
+		../common/vscp-framework/src/events/vscp_evt_wireless.c
 
 # Include all source pathes here like ../src1:../src2
-VPATH= ../common:../common/vscphelper:../../vscp:../../vscp/events:vscp_user:../../vscp/bootloader
+VPATH= ../common:../common/vscphelper:../common/vscp-framework/src:../common/vscp-framework/src/events:vscp_user:../common/vscp-bootloder/src
 
 # Determine build type
 ifeq ($(MAKECMDGOALS),debug)
