@@ -1,0 +1,21 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build logger (debug)
+      run: cd logger; ./make debug; cd ..
+    - name: Build nodeSim (debug)
+      run: cd nodeSime; ./make debug; cd ..
+    - name: Build programmer (debug)
+      run: cd programmer; ./make debug; cd ..
