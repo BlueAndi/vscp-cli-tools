@@ -1,3 +1,6 @@
 [submodule "common/vscp-framework"]
 	path = common/vscp-framework
 	url = https://github.com/BlueAndi/vscp-framework
+[submodule "common/vscp-bootloader"]
+	path = common/vscp-bootloader
+	url = https://github.com/BlueAndi/vscp-bootloader
