@@ -28,17 +28,17 @@ jobs:
       - name: Build logger (debug)
         run: |
           cd ./logger
-          ./make debug
+          make debug
           cd ..
 
       - name: Build nodeSim (debug)
         run: |
           cd ./nodeSim
-          ./make debug
+          make debug
           cd ..
 
       - name: Build programmer (debug)
         run: |
           cd ./programmer
-          ./make debug
+          make debug
           cd ..
