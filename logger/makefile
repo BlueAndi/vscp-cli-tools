@@ -63,22 +63,22 @@ endif
 
 # Determine operating system
 ifeq ($(OS),Windows_NT)
-BUILDOS= win32
+BUILDOS= win64
 else
 BUILDOS= linux
 endif
-		
+
 # Library search path (-L...)
 LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE)
 
 # Libraries (-l...)
-LIBRARIES= -lm -ldl -lpthread -lvscphelper15 -lexpat
+LIBRARIES= -lm -lvscphelper
 
 # Windows specific part
 ifeq ($(OS),Windows_NT)
-
 LIBRARIES+= -lws2_32
-
+else
+LIBRARIES+= -ldl
 endif
 
 # Preprocessor defines
@@ -116,6 +116,9 @@ CFLAGS+= -g -O1
 # -fprofile-arcs  : Enable profiling
 LDFLAGS+=
 
+# The flag indicates in the name of the DLL whether its a release or debug version
+DLLFLAG= d
+
 endif
 
 ifeq ($(MAKECMDGOALS),release)
@@ -130,6 +133,9 @@ CFLAGS+= -Os
 # -ftest-coverage : Enable coverage
 # -fprofile-arcs  : Enable profiling
 LDFLAGS+=
+
+# The flag indicates in the name of the DLL whether its a release or debug version
+DLLFLAG=
 
 endif
 
@@ -154,9 +160,11 @@ DLLS=
 ifeq ($(OS),Windows_NT)
 
 # DLLs
-DLLS= $(BINDIR)/vscphelper.dll \
-	$(BINDIR)/ssleay32.dll \
-	$(BINDIR)/libeay32.dll
+DLLS= $(BINDIR)/libcrypto-1_1-x64.dll \
+	$(BINDIR)/libexpat$(DLLFLAG).dll \
+	$(BINDIR)/libssl-1_1-x64.dll \
+	$(BINDIR)/libvscphelper15.dll \
+	$(BINDIR)/pthreadVCE3$(DLLFLAG).dll
 
 endif
 

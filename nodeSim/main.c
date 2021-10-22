@@ -292,6 +292,7 @@ int main(int argc, char* argv[])
                 VSCP_TP_ADAPTER_RET ret = VSCP_TP_ADAPTER_RET_OK;
 
                 log_printf("Connecting ...\n");
+                fflush(stdout);
 
                 ret = vscp_tp_adapter_connect(  main_cmdLineArgs.daemonAddr,
                                                 main_cmdLineArgs.daemonUser,
@@ -320,6 +321,7 @@ int main(int argc, char* argv[])
                 else
                 {
                     log_printf("Connection successful.\n");
+                    fflush(stdout);
                 }
             }
         }
@@ -375,6 +377,7 @@ int main(int argc, char* argv[])
         }
 
         printf("Please wait ...\n");
+        fflush(stdout);
 
         /* Stop temperature simulation */
         temperature_sim_stop();
@@ -872,6 +875,8 @@ static void main_loop(main_CmdLineArgs *main_cmdLineArgs)
         }
         else
         {
+            fflush(stdout);
+            
             /* Give other programs a chance. */
             platform_delay(10);
         }

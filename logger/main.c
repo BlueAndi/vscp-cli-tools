@@ -223,7 +223,16 @@ int main(int argc, char* argv[])
         }
     
         printf("Connecting to %s", main_cmdLineArgs.daemonAddr);
-        printf(" with credentials: %s@%s\n", main_cmdLineArgs.daemonUser, main_cmdLineArgs.daemonPassword);
+        if (NULL == main_cmdLineArgs.daemonUser)
+        {
+            printf(" without credentials\n");
+        }
+        else
+        {
+            printf(" with credentials: %s@%s\n", main_cmdLineArgs.daemonUser, main_cmdLineArgs.daemonPassword);
+        }
+
+        fflush(stdout);
         
         ret = main_connect( &hSession,
                             main_cmdLineArgs.daemonAddr,
@@ -252,6 +261,7 @@ int main(int argc, char* argv[])
         else
         {
             printf("Connection successful.\n");
+            fflush(stdout);
             
             /* If no error happened, start main loop. */
             if (FALSE == abort)
@@ -260,6 +270,7 @@ int main(int argc, char* argv[])
             }
 
             printf("Please wait ...\n");
+            fflush(stdout);
 
             main_disconnect(&hSession);
             
@@ -303,7 +314,7 @@ static MAIN_RET main_init(void)
     
     /* Initialize command line parser */
     cmdLineParser_init();
-    
+
     return status;
 }
 
@@ -471,7 +482,7 @@ static void main_loop(long hSession)
                     uint32_t index  = 0;
                     uint8_t  max    = 0;
 
-                    log_printf("Rx: L2    class=0x%02X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
+                    log_printf("Rx: L2    class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
                         daemonEvent.vscp_class,
                         daemonEvent.vscp_type,
                         (daemonEvent.head >> 5) & 0x07,
@@ -505,6 +516,8 @@ static void main_loop(long hSession)
 
                     printf("\n");
                 }
+
+                fflush(stdout);
             }
 
             /* Give other programs a chance. */

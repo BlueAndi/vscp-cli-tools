@@ -347,7 +347,16 @@ int main(int argc, char* argv[])
         else
         {
             printf("Connecting to %s", main_cmdLineArgs.daemonAddr);
-            printf(" with credentials: %s@%s\n", main_cmdLineArgs.daemonUser, main_cmdLineArgs.daemonPassword);
+            if (NULL == main_cmdLineArgs.daemonUser)
+            {
+                printf(" without credentials\n");
+            }
+            else
+            {
+                printf(" with credentials: %s@%s\n", main_cmdLineArgs.daemonUser, main_cmdLineArgs.daemonPassword);
+            }
+
+            fflush(stdout);
 
             ret = main_connect( &hSession,
                                 main_cmdLineArgs.daemonAddr,
@@ -376,6 +385,7 @@ int main(int argc, char* argv[])
             else
             {
                 printf("Connection successful.\n");
+                fflush(stdout);
 
                 /* If no error happened, start programming. */
                 if (FALSE == abort)
@@ -388,6 +398,7 @@ int main(int argc, char* argv[])
                 }
 
                 printf("Please wait ...\n");
+                fflush(stdout);
 
                 main_disconnect(&hSession);
 
@@ -609,6 +620,8 @@ static MAIN_RET main_programming(long hSession, intelHexParser_Record* recSet, u
             }
 
             main_programNode(&progCon, hSession, recSet, recNum, rxEvent);
+            
+            fflush(stdout);
 
             /* Give other programs a chance. */
             platform_delay(1);
