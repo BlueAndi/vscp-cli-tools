@@ -130,7 +130,7 @@ LIBRARIES= -lm -lvscphelper -lexpat
 ifeq ($(OS),Windows_NT)
 LIBRARIES+= -lws2_32
 else
-LIBRARIES+= -ldl
+LIBRARIES+= -ldl -lexpat
 endif
 
 # Preprocessor defines
