@@ -213,7 +213,24 @@ static const char*                  vscp_tp_adapter_errorStr[]  =
     /* 39 */ "Login error password",
     /* 40 */ "Could not connect",
     /* 41 */ "The handle is not valid",
-    /* 42 */ "Operation failed for some reason"
+    /* 42 */ "Operation failed for some reason",
+    /* 43 */ "Supplied buffer is to small to fit content",
+    /* 44 */ "Requested item (remote variable) is unknown",
+    /* 45 */ "The name is already in use.",
+    /* 46 */ "Error when writing data",
+    /* 47 */ "Operation stopped or aborted",
+    /* 48 */ "Pointer with invalid value",
+    /* 49 */ "Not allowed to do that",
+    /* 50 */ "Invalid path (permissions)",
+    /* 51 */ "General error, errno variable holds error",
+    /* 52 */ "Interrupted by signal or other cause",
+    /* 53 */ "Value, parameter or something else is missing",
+    /* 54 */ "There is no connection",
+    /* 55 */ "Item (variable) is read only",
+    /* 56 */ "Item (variable) is of wrong type",
+    /* 57 */ "Does not have permission to do that",
+    /* 58 */ "Syntax is invalid",
+    /* 59 */ "Index is out of bounds"
 };
 
 /*******************************************************************************
@@ -268,6 +285,8 @@ extern BOOL vscp_tp_adapter_readMessage(vscp_RxMessage * const msg)
             {
                 LOG_ERROR_INT32("Couldn't check for available data: ", vscphlpRet);
                 LOG_ERROR_STR("vscphlp_isDataAvailable failed: ", vscp_tp_adapter_getErrorStr(vscphlpRet));
+
+                printf("Handle: %ld\n", client->hSession);
 
                 log_printf("Connection lost.\n");
                 vscp_tp_adapter_isConnected = FALSE;
