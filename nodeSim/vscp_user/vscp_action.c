@@ -331,7 +331,7 @@ static void vscp_action_dimLamp(uint8_t par, vscp_RxMessage const * const msg)
      */
     if ((VSCP_CLASS_L1_CONTROL != msg->vscpClass) ||
         (VSCP_TYPE_CONTROL_DIM_LAMPS != msg->vscpType) ||
-        (3 != msg->dataNum))
+        (3 != msg->dataSize))
     {
         return;
     }

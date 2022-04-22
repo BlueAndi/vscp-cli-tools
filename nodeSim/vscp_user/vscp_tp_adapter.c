@@ -361,7 +361,7 @@ extern BOOL vscp_tp_adapter_writeMessage(vscp_TxMessage const * const msg)
     BOOL    status  = FALSE;
 
     if ((NULL != msg) &&                        /* Message shall exists */
-        (VSCP_L1_DATA_SIZE >= msg->dataNum))    /* Number of data bytes is limited */
+        (VSCP_L1_DATA_SIZE >= msg->dataSize))   /* Number of data bytes is limited */
     {
         vscp_tp_adapter_NetPar* client  = &vscp_tp_adapter_clientPar;
         uint8_t                 index   = 0;
@@ -385,7 +385,7 @@ extern BOOL vscp_tp_adapter_writeMessage(vscp_TxMessage const * const msg)
                 daemonEvent.head        = 0;
                 daemonEvent.head        |= (msg->priority & 0x07) << 5;
                 daemonEvent.head        |= (msg->hardCoded & 0x01) << 4;
-                daemonEvent.sizeData    = msg->dataNum;
+                daemonEvent.sizeData    = msg->dataSize;
                 
                 /* Assign interface GUID and node nickname at LSB byte */
                 for(index = 0; index < (VSCP_TP_ADAPTER_INTERFACE_GUID_SIZE - 1); ++index)
@@ -726,9 +726,9 @@ static BOOL vscp_tp_adapter_handleL1Event(vscp_RxMessage * const msg, vscpEventE
         msg->priority   = (daemonEvent->head >> 5) & 0x07;
         msg->oAddr      = daemonEvent->GUID[15]; /* Node GUID LSB */
         msg->hardCoded  = (daemonEvent->head >> 4) & 0x01;
-        msg->dataNum    = (uint8_t)(daemonEvent->sizeData & 0xff);
+        msg->dataSize   = (uint8_t)(daemonEvent->sizeData & 0xff);
 
-        for(index = 0; index < msg->dataNum; ++index)
+        for(index = 0; index < msg->dataSize; ++index)
         {
             msg->data[index] = daemonEvent->data[index];
         }
@@ -782,15 +782,15 @@ static BOOL vscp_tp_adapter_handleL1OverL2Event(vscp_RxMessage * const msg, vscp
          * This is done quite simple by checking for greater or equal the
          * GUID size. Because all other level 1 events has a lower data size.
          */
-        msg->dataNum    = (uint8_t)(daemonEvent->sizeData & 0xff);
-        if (VSCP_TP_ADAPTER_INTERFACE_GUID_SIZE <= msg->dataNum)
+        msg->dataSize   = (uint8_t)(daemonEvent->sizeData & 0xff);
+        if (VSCP_TP_ADAPTER_INTERFACE_GUID_SIZE <= msg->dataSize)
         {
             /* Overstep the interface GUID */
-            msg->dataNum -= VSCP_TP_ADAPTER_INTERFACE_GUID_SIZE;
+            msg->dataSize -= VSCP_TP_ADAPTER_INTERFACE_GUID_SIZE;
             dataOffset = VSCP_TP_ADAPTER_INTERFACE_GUID_SIZE;
         }
 
-        for(index = 0; index < msg->dataNum; ++index)
+        for(index = 0; index < msg->dataSize; ++index)
         {
             msg->data[index] = daemonEvent->data[index + dataOffset];
         }
@@ -816,13 +816,13 @@ static void vscp_tp_adapter_showMessage(vscp_Message const * const msg, BOOL isR
         msg->priority,
         msg->oAddr,
         (FALSE == msg->hardCoded) ? '-' : 'h',
-        msg->dataNum);
+        msg->dataSize);
 
-    for(index = 0; index < msg->dataNum; ++index)
+    for(index = 0; index < msg->dataSize; ++index)
     {
         printf("%02X", msg->data[index]);
 
-        if ((index + 1) < msg->dataNum)
+        if ((index + 1) < msg->dataSize)
         {
             printf(" ");
         }

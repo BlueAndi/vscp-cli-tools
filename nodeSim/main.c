@@ -857,7 +857,7 @@ static void main_loop(main_CmdLineArgs *main_cmdLineArgs)
                 rxMsg.priority  = VSCP_PRIORITY_3_NORMAL;
                 rxMsg.oAddr     = (uint8_t)(keyValue - '0') + 1;
                 rxMsg.hardCoded = FALSE;
-                rxMsg.dataNum   = 7;
+                rxMsg.dataSize  = 7;
                 rxMsg.data[0]   = (uint8_t)(keyValue - '0');
                 rxMsg.data[1]   = 0xff;
                 rxMsg.data[2]   = 0xff;
