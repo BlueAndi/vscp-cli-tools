@@ -33,7 +33,7 @@
 ################################################################################
 
 # Software version
-VERSION= 0.4.1
+VERSION= 0.5.0
 
 # Binary file name
 BIN= vscpExamplePc
