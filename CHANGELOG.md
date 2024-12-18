@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0
+
+  * Build environment updated for using MSYS2 MinGW UCRT 64-bit.
+  * Using VSCP-framework v ...
+  * Using VSCP-bootloader v ...
+
 ## 2.0.0
 
   * [VSCP-framework repository](https://github.com/BlueAndi/vscp-framework) was restructured and the CLI tools moved to this dedicated repository.

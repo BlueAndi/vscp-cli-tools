@@ -6,19 +6,19 @@
 
 Command line interface tools used to maintain or simulate VSCP nodes.
 
-- [VSCP CLI Tools](#vscp-cli-tools)
-- [VSCP](#vscp)
-- [Tools](#tools)
-- [How To Build](#how-to-build)
-  - [Prerequisite](#prerequisite)
-    - [Linux](#linux)
-    - [Windows](#windows)
-  - [1 Clone The Repository](#1-clone-the-repository)
-  - [2 Choose Project](#2-choose-project)
-  - [3 Build](#3-build)
-- [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
-- [License](#license)
-- [Contribution](#contribution)
+* [VSCP CLI Tools](#vscp-cli-tools)
+* [VSCP](#vscp)
+* [Tools](#tools)
+* [How To Build](#how-to-build)
+  * [Prerequisite](#prerequisite)
+    * [Linux](#linux)
+    * [Windows](#windows)
+  * [1 Clone The Repository](#1-clone-the-repository)
+  * [2 Choose Project](#2-choose-project)
+  * [3 Build](#3-build)
+* [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
+* [License](#license)
+* [Contribution](#contribution)
 
 # VSCP
 
@@ -42,16 +42,29 @@ More information can be found on the main site http://www.vscp.org
 
 ### Linux
 
-Get the standard gcc build environment:
-```
-$ sudo apt update
-$ sudo apt install build-essential
-```
+1. Get the standard gcc build environment:
+    ```bash
+    sudo apt update
+    sudo apt install build-essential
+    ```
+2. Install expat packages:
+    ```bash
+    sudo apt install libexpat
+    sudo apt install libexpat-devel
+    ```
 
 ### Windows
 
 1. Install MSYS2 (https://www.msys2.org/) and follow the complete installation instructions there. Only installing the MSYS2 binary is not enough! There are several steps in the MSYS2 shell necessary.
-2. The gcc build environment will be available in the "MSYS MinGW 64-bit" shell.
+2. The gcc build environment will be available in the "MSYS2 MinGW UCRT 64-bit" shell.
+3. Install expat packages:
+    ```bash
+    pacman -S libexpat
+    pacman -S libexpat-devel
+    ```
+4. Install required visual studio runtime packages:
+   * https://aka.ms/vs/17/release/vc_redist.x86.exe
+   * https://aka.ms/vs/17/release/vc_redist.x64.exe
 
 ## 1 Clone The Repository
 

@@ -45,7 +45,8 @@ INCLUDES= -I. \
 		-I../common/vscp-bootloader/src \
 		-I../common/vscphelper \
 		-I../common/vscp-framework/src \
-		-I../common/vscp-framework/src/events
+		-I../common/vscp-framework/src/events \
+		-I/usr/include
 
 # Sources
 SOURCES= main.c \
@@ -121,7 +122,8 @@ BUILDOS= linux
 endif
 
 # Library search path (-L...)
-LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE)
+LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE) \
+		-L/usr/lib
 
 # Libraries (-l...)
 LIBRARIES= -lm -lvscphelper -lexpat
