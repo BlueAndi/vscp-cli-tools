@@ -6,19 +6,20 @@
 
 Command line interface tools used to maintain or simulate VSCP nodes.
 
-* [VSCP CLI Tools](#vscp-cli-tools)
-* [VSCP](#vscp)
-* [Tools](#tools)
-* [How To Build](#how-to-build)
-  * [Prerequisite](#prerequisite)
-    * [Linux](#linux)
-    * [Windows](#windows)
-  * [1 Clone The Repository](#1-clone-the-repository)
-  * [2 Choose Project](#2-choose-project)
-  * [3 Build](#3-build)
-* [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
-* [License](#license)
-* [Contribution](#contribution)
+- [VSCP CLI Tools](#vscp-cli-tools)
+- [VSCP](#vscp)
+- [Tools](#tools)
+- [How To Build](#how-to-build)
+  - [Prerequisite](#prerequisite)
+    - [Linux](#linux)
+    - [Windows](#windows)
+  - [1 Clone The Repository](#1-clone-the-repository)
+  - [2 Choose Project](#2-choose-project)
+  - [3 Build](#3-build)
+- [Used Libraries](#used-libraries)
+- [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
+- [License](#license)
+- [Contribution](#contribution)
 
 # VSCP
 
@@ -49,8 +50,46 @@ More information can be found on the main site http://www.vscp.org
     ```
 2. Install expat packages:
     ```bash
-    sudo apt install libexpat
-    sudo apt install libexpat-devel
+    sudo apt install libexpat1
+    sudo apt install libexpat1-dev
+    ```
+3. Install OpenSSL v1.1:
+    1. Install dependencies:
+    ```bash
+    sudo apt install checkinstall zlib1g-dev
+    ```
+    2. Download OpenSSL:
+    ```bash
+    cd /usr/local/src/
+    sudo wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
+    sudo tar -xf openssl-1.1.1k.tar.gz
+    cd openssl-1.1.1k.tar.gz
+    ```
+    3. Install and compile OpenSSL:
+    ```bash
+    sudo ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib
+    sudo make
+    sudo make test
+    sudo make install
+    ```
+    4. Configure link libraries:
+    ```bash
+    cd /etc/ld.so.conf.d/
+    sudo nano openssl-1.1.1k.conf
+    ```
+    Now add /usr/local/ssl/lib to the openssl-1.1.1k.conf file and save.
+    5. Reload dynamic link:
+    ```bash
+    sudo ldconfig -v
+    ```
+4. Install vscp-helper-lib:
+    1. Download vscp-helper-lib:
+    ```bash
+    sudo wget https://github.com/grodansparadis/vscp-helper-lib/releases/download/v15.0.0/libvscphelper_15.0.0_amd64.deb
+    ```
+    2. Install vscp-helper-lib:
+    ```bash
+    sudo apt install libvscphelper_15.0.0_amd64.deb
     ```
 
 ### Windows
@@ -86,6 +125,14 @@ Choose the project by entering the corresponding folder, e.g. ```/nodeSim```.
 
 Build debug variant with ```make debug``` or use ```make release``` for the release variant.
 The result will be in the ```/<project>/bin``` folder.
+
+# Used Libraries
+
+| Library | Description | License |
+| - | - | - |
+| [Expat](https://github.com/libexpat/libexpat) | Fast streaming XML parser. | MIT |
+| [OpenSSL](https://github.com/openssl/openssl) | OpenSSL is a robust, commercial-grade, full-featured Open Source Toolkit for the TLS (formerly SSL), DTLS and QUIC (currently client side only) protocols. | Apache-2.0 |
+| [vscp-helper-lib](https://github.com/grodansparadis/vscp-helper-lib) | VSCP helper functionality | MIT |
 
 # Issues, Ideas And Bugs
 

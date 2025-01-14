@@ -72,13 +72,13 @@ endif
 LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE)
 
 # Libraries (-l...)
-LIBRARIES= -lm -lvscphelper
+LIBRARIES= -lm -lvscphelper -lexpat
 
 # Windows specific part
 ifeq ($(OS),Windows_NT)
 LIBRARIES+= -lws2_32
 else
-LIBRARIES+= -ldl -lexpat
+LIBRARIES+= -ldl -lssl
 endif
 
 # Preprocessor defines
@@ -98,7 +98,7 @@ CFLAGS= -Wall -ffunction-sections -fdata-sections -fshort-enums -std=gnu99 -funs
 # -Wl,--cref        : Add cross reference to map file
 # -Wl,--gc-sections : Enable garbage collection of unused input sections
 # -Wl,-rpath='$$ORIGIN/../lib/linux' : Set shared object search path
-LDFLAGS= -Wall -Wl,-Map,$(BINDIR)/$(BIN).map -Wl,--cref -Wl,--gc-sections -Wl,-rpath='$$ORIGIN/../../../../common/pc/vscphelper/lib/linux/$(BUILDTYPE)'
+LDFLAGS= -Wall -Wl,-Map,$(BINDIR)/$(BIN).map -Wl,--cref -Wl,--gc-sections -Wl,-rpath='$$ORIGIN/usr/lib/x86_64-linux-gnu/'
 
 ifeq ($(MAKECMDGOALS),debug)
 
