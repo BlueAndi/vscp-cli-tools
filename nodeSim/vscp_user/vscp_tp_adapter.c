@@ -737,7 +737,7 @@ static BOOL vscp_tp_adapter_handleL1Event(vscp_RxMessage * const msg, vscpEventE
     else
     {
         uint8_t index   = 0;
-    return;
+
         msg->vscpClass  = daemonEvent->vscp_class;
         msg->vscpType   = (uint8_t)(daemonEvent->vscp_type & 0xff);
         msg->priority   = (daemonEvent->head >> 5) & 0x07;
