@@ -42,55 +42,8 @@ More information can be found on the main site http://www.vscp.org
 ## Prerequisite
 
 ### Linux
-
-1. Get the standard gcc build environment:
-    ```bash
-    sudo apt update
-    sudo apt install build-essential
-    ```
-2. Install expat packages:
-    ```bash
-    sudo apt install libexpat1
-    sudo apt install libexpat1-dev
-    ```
-3. Install OpenSSL v1.1:
-    1. Install dependencies:
-    ```bash
-    sudo apt install checkinstall zlib1g-dev
-    ```
-    2. Download OpenSSL:
-    ```bash
-    cd /usr/local/src/
-    sudo wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
-    sudo tar -xf openssl-1.1.1k.tar.gz
-    cd openssl-1.1.1k.tar.gz
-    ```
-    3. Install and compile OpenSSL:
-    ```bash
-    sudo ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib
-    sudo make
-    sudo make test
-    sudo make install
-    ```
-    4. Configure link libraries:
-    ```bash
-    cd /etc/ld.so.conf.d/
-    sudo nano openssl-1.1.1k.conf
-    ```
-    Now add /usr/local/ssl/lib to the openssl-1.1.1k.conf file and save.
-    5. Reload dynamic link:
-    ```bash
-    sudo ldconfig -v
-    ```
-4. Install vscp-helper-lib:
-    1. Download vscp-helper-lib:
-    ```bash
-    sudo wget https://github.com/grodansparadis/vscp-helper-lib/releases/download/v15.0.0/libvscphelper_15.0.0_amd64.deb
-    ```
-    2. Install vscp-helper-lib:
-    ```bash
-    sudo apt install libvscphelper_15.0.0_amd64.deb
-    ```
+1. Open a terminal.
+2. Call ```setup_linux.sh```
 
 ### Windows
 
