@@ -30,7 +30,7 @@ jobs:
       - name: Download and install vscp-helper-lib
         run: |
           sudo wget https://github.com/grodansparadis/vscp-helper-lib/releases/download/v15.0.0/libvscphelper_15.0.0_amd64.deb
-          sudo apt install libvscphelper_15.0.0_amd64.deb
+          sudo apt install ./libvscphelper_15.0.0_amd64.deb
           sudo ldconfig
           ls /usr/lib/x86_64-linux-gnu/libvscp*
 
