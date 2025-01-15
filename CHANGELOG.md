@@ -3,8 +3,8 @@
 ## 3.0.0
 
   * Build environment updated for using MSYS2 MinGW UCRT 64-bit.
-  * Using VSCP-framework v ...
-  * Using VSCP-bootloader v ...
+  * Using VSCP-framework v2.1.0
+  * Using VSCP-bootloader v3.0.0
 
 ## 2.0.0
 
