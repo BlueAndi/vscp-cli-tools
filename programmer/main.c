@@ -154,10 +154,11 @@ typedef enum
     MAIN_PRG_STATE_READ_REG_PAGE_SELECT_RSP,    /**< Wait for read page select register response */
     MAIN_PRG_STATE_ENTER_BOOT_LOADER_MODE,      /**< Enter boot loader mode */
     MAIN_PRG_STATE_ENTER_BOOT_LOADER_MODE_ACK,  /**< Wait for enter boot loader mode acknowledge */
-    MAIN_PRG_STATE_START_BLOCK_TRANSFER,        /**< Start block transfer */
-    MAIN_PRG_STATE_START_BLOCK_TRANSFER_ACK,    /**< Wait for start block transfer acknowledge */
-    MAIN_PRG_STATE_BLOCK_DATA,                  /**< Block transfer */
-    MAIN_PRG_STATE_BLOCK_DATA_ACK,              /**< Wait for block transfer acknowledge */
+    MAIN_PRG_STATE_START_BLOCK,                 /**< Start block transfer */
+    MAIN_PRG_STATE_START_BLOCK_ACK,             /**< Wait for start block transfer acknowledge */
+    MAIN_PRG_STATE_BLOCK_DATA,                  /**< Block data */
+    MAIN_PRG_STATE_BLOCK_CHUNK_ACK,             /**< Wait for block chunk acknowledge */
+    MAIN_PRG_STATE_BLOCK_DATA_ACK,              /**< Wait for block data acknowledge */
     MAIN_PRG_STATE_PROGRAM_BLOCK,               /**< Program block */
     MAIN_PRG_STATE_PROGRAM_BLOCK_ACK,           /**< Wait for program block acknowledge */
     MAIN_PRG_STATE_ACTIVATE_NEW_IMAGE,          /**< Activate new image */
@@ -1113,7 +1114,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 }
                 else
                 {
-                    progCon->state = MAIN_PRG_STATE_START_BLOCK_TRANSFER;
+                    progCon->state = MAIN_PRG_STATE_START_BLOCK;
                 }
             }
             else if ((VSCP_TYPE_PROTOCOL_NACK_BOOT_LOADER == rxEvent->vscp_type) &&
@@ -1131,9 +1132,9 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         }
         break;
 
-    case MAIN_PRG_STATE_START_BLOCK_TRANSFER:
+    case MAIN_PRG_STATE_START_BLOCK:
 
-        log_printf("Start block data transfer.\n");
+        log_printf("Start block data.\n");
 
         txEvent.vscp_class  = VSCP_CLASS1_PROTOCOL;
         txEvent.vscp_type   = VSCP_TYPE_PROTOCOL_START_BLOCK;
@@ -1154,13 +1155,13 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         }
         else
         {
-            log_printf("Wait for acknowledge.\n");
+            log_printf("Wait for start block acknowledge.\n");
 
-            progCon->state = MAIN_PRG_STATE_START_BLOCK_TRANSFER_ACK;
+            progCon->state = MAIN_PRG_STATE_START_BLOCK_ACK;
         }
         break;
 
-    case MAIN_PRG_STATE_START_BLOCK_TRANSFER_ACK:
+    case MAIN_PRG_STATE_START_BLOCK_ACK:
         if ((NULL != rxEvent) &&
             (VSCP_CLASS1_PROTOCOL == rxEvent->vscp_class))
         {
@@ -1192,7 +1193,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         break;
 
     case MAIN_PRG_STATE_BLOCK_DATA:
-        log_printf("Block %u data transfer %u\n", progCon->blockIndex, progCon->blockFragmentIndex);
+        log_printf("Block %u data %u\n", progCon->blockIndex, progCon->blockFragmentIndex);
 
         txEvent.vscp_class  = VSCP_CLASS1_PROTOCOL;
         txEvent.vscp_type   = VSCP_TYPE_PROTOCOL_BLOCK_DATA;
@@ -1224,7 +1225,15 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 txEvent.data[index] = MAIN_BLOCK_FILL_BYTE;
 
                 progCon->blockCrcCalculated = crc16ccitt_update(progCon->blockCrcCalculated, &txEvent.data[index], 1);
-                
+                                ++progCon->blockFragmentIndex;
+
+                /* Block finished? */
+                if (progCon->blockSize <= (progCon->blockFragmentIndex * 8))
+                {
+                    log_printf("Wait for block data acknowledge.\n");
+
+                    progCon->state = MAIN_PRG_STATE_BLOCK_DATA_ACK;
+                }
                 ++txEvent.sizeData;
             }
             /* Error */
@@ -1247,15 +1256,42 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
             }
             else
             {
+                log_printf("Wait for block chunk acknowledge.\n");
+
+                progCon->state = MAIN_PRG_STATE_BLOCK_CHUNK_ACK;
+            }
+        }
+        break;
+
+    case MAIN_PRG_STATE_BLOCK_CHUNK_ACK:
+        if ((NULL != rxEvent) &&
+            (VSCP_CLASS1_PROTOCOL == rxEvent->vscp_class))
+        {
+            if (VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_NACK == rxEvent->vscp_type)
+            {
+                /* Repeat */
+            }
+            else if (VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_ACK == rxEvent->vscp_type)
+            {
                 ++progCon->blockFragmentIndex;
 
                 /* Block finished? */
                 if (progCon->blockSize <= (progCon->blockFragmentIndex * 8))
                 {
-                    log_printf("Wait for acknowledge.\n");
+                    log_printf("Wait for block data acknowledge.\n");
 
                     progCon->state = MAIN_PRG_STATE_BLOCK_DATA_ACK;
                 }
+                /* Block not finished, send next chunk. */
+                else
+                {
+                    progCon->state = MAIN_PRG_STATE_BLOCK_DATA;
+                }
+            }
+            else
+            {
+                /* Nothing to do. */
+                ;
             }
         }
         break;
@@ -1283,7 +1319,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                     log_printf("Block %u failed to transfer (invalid CRC 0x%04X, expected 0x%04X).\n", progCon->blockIndex, receivedCrc, progCon->blockCrcCalculated);
 
                     ++progCon->blockRetry;
-                    progCon->state = MAIN_PRG_STATE_START_BLOCK_TRANSFER;
+                    progCon->state = MAIN_PRG_STATE_START_BLOCK;
                 }
                 else
                 {
@@ -1299,11 +1335,16 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 log_printf("Error code: %u\n", rxEvent->data[0]);
 
                 ++progCon->blockRetry;
-                progCon->state = MAIN_PRG_STATE_START_BLOCK_TRANSFER;
+                progCon->state = MAIN_PRG_STATE_START_BLOCK;
+            }
+            else
+            {
+                /* Nothing to do. */
+                ;
             }
 
             /* Transfer block again? */
-            if (MAIN_PRG_STATE_START_BLOCK_TRANSFER == progCon->state)
+            if (MAIN_PRG_STATE_START_BLOCK == progCon->state)
             {
                 /* Maximum number of retries reached? */
                 if (MAIN_MAX_BLOCK_TRANSFER_RETRIES <= progCon->blockRetry)
@@ -1347,7 +1388,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         }
         else
         {
-            log_printf("Wait for acknowledge.\n");
+            log_printf("Wait for program block acknowledge.\n");
 
             progCon->state = MAIN_PRG_STATE_PROGRAM_BLOCK_ACK;
         }
@@ -1377,7 +1418,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 }
                 else
                 {
-                    progCon->state = MAIN_PRG_STATE_START_BLOCK_TRANSFER;
+                    progCon->state = MAIN_PRG_STATE_START_BLOCK;
                 }
             }
             else if ((VSCP_TYPE_PROTOCOL_PROGRAM_BLOCK_DATA_NACK == rxEvent->vscp_type) &&
@@ -1413,7 +1454,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         }
         else
         {
-            log_printf("Wait for acknowledge.\n");
+            log_printf("Wait for activate new image acknowledge.\n");
 
             progCon->state = MAIN_PRG_STATE_ACTIVATE_NEW_IMAGE_ACK;
         }
