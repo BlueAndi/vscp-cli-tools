@@ -1,6 +1,6 @@
 /* The MIT License (MIT)
  *
- * Copyright (c) 2014 - 2024 Andreas Merkle
+ * Copyright (c) 2014 - 2025 Andreas Merkle
  * http://www.blue-andi.de
  * vscp@blue-andi.de
  *
@@ -68,6 +68,9 @@
 
 /** Daemon wait time after a command was executed in ms */
 #define VSCP_TP_ADAPTER_CMD_WAIT_TIME       250
+
+/** Time for waiting until a event is received in ms */
+#define VSCP_TP_ADAPTER_RECEIVE_TIMEOUT     500
 
 /*******************************************************************************
     MACROS
@@ -270,7 +273,6 @@ extern BOOL vscp_tp_adapter_readMessage(vscp_RxMessage * const msg)
         /* Connected to a VSCP daemon? */
         if (0 != client->hSession)
         {
-            uint32_t    count       = 0;
             vscpEventEx daemonEvent;
             int         vscphlpRet  = 0;
 
@@ -280,51 +282,40 @@ extern BOOL vscp_tp_adapter_readMessage(vscp_RxMessage * const msg)
                 /* Nothing to do */
                 ;
             }
-            /* Check for available events. */
-            else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_isDataAvailable(client->hSession, &count)))
+            /* Receive a single VSCP event. */
+            else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_blockingReceiveEventEx(client->hSession, &daemonEvent, VSCP_TP_ADAPTER_RECEIVE_TIMEOUT)))
             {
-                LOG_ERROR_INT32("Couldn't check for available data: ", vscphlpRet);
-                LOG_ERROR_STR("vscphlp_isDataAvailable failed: ", vscp_tp_adapter_getErrorStr(vscphlpRet));
-
-                printf("Handle: %ld\n", client->hSession);
-
-                log_printf("Connection lost.\n");
-                vscp_tp_adapter_isConnected = FALSE;
-            }
-            /* Any event available? */
-            else if (0 < count)
-            {
-                if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_receiveEventEx(client->hSession, &daemonEvent)))
+                if (VSCP_ERROR_TIMEOUT != vscphlpRet)
                 {
                     LOG_WARNING_INT32("Couldn't receive event: ", vscphlpRet);
                     LOG_WARNING_STR("vscphlp_receiveEventEx failed: ", vscp_tp_adapter_getErrorStr(vscphlpRet));
                 }
-                /* Handle all level 1 events? */
-                else if (VSCP_TP_ADAPTER_LVL_1 == client->lvl)
+            }
+            /* Handle all level 1 events? */
+            else if (VSCP_TP_ADAPTER_LVL_1 == client->lvl)
+            {
+                if (FALSE == vscp_tp_adapter_handleL1Event(msg, &daemonEvent))
+                {
+                    status = TRUE;
+                }
+            }
+            /* Handle all level 1 events and level 1 over level 2 events? */
+            else if (VSCP_TP_ADAPTER_LVL_1_OVER_2 == client->lvl)
+            {
+                /* Level 1 event? */
+                if (VSCP_CLASS_L1_L2_BASE > daemonEvent.vscp_class)
                 {
                     if (FALSE == vscp_tp_adapter_handleL1Event(msg, &daemonEvent))
                     {
                         status = TRUE;
                     }
                 }
-                /* Handle all level 1 events and level 1 over level 2 events? */
-                else if (VSCP_TP_ADAPTER_LVL_1_OVER_2 == client->lvl)
+                /* Level 1 over level 2 event? */
+                else if (VSCP_TP_ADAPTER_CLASS_L2_BASE > daemonEvent.vscp_class)
                 {
-                    /* Level 1 event? */
-                    if (VSCP_CLASS_L1_L2_BASE > daemonEvent.vscp_class)
+                    if (FALSE == vscp_tp_adapter_handleL1OverL2Event(msg, &daemonEvent))
                     {
-                        if (FALSE == vscp_tp_adapter_handleL1Event(msg, &daemonEvent))
-                        {
-                            status = TRUE;
-                        }
-                    }
-                    /* Level 1 over level 2 event? */
-                    else if (VSCP_TP_ADAPTER_CLASS_L2_BASE > daemonEvent.vscp_class)
-                    {
-                        if (FALSE == vscp_tp_adapter_handleL1OverL2Event(msg, &daemonEvent))
-                        {
-                            status = TRUE;
-                        }
+                        status = TRUE;
                     }
                 }
             }
@@ -400,10 +391,22 @@ extern BOOL vscp_tp_adapter_writeMessage(vscp_TxMessage const * const msg)
                     daemonEvent.data[index] = msg->data[index];
                 }
 
-                if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_sendEventEx(client->hSession, &daemonEvent)))
+                /* Quit receive loop first, to be able to send a event. */
+                if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_quitReceiveLoop(client->hSession)))
+                {
+                    LOG_WARNING_INT32("Couldn't send event to daemon:", vscphlpRet);
+                    LOG_WARNING_STR("vscphlp_quitReceiveLoop failed: ", vscp_tp_adapter_getErrorStr(vscphlpRet));
+                }
+                /* Send the event. */
+                else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_sendEventEx(client->hSession, &daemonEvent)))
                 {
                     LOG_WARNING_INT32("Couldn't send event to daemon:", vscphlpRet);
                     LOG_WARNING_STR("vscphlp_sendEventEx failed: ", vscp_tp_adapter_getErrorStr(vscphlpRet));
+                }
+                /* Enter receive loop again, required for vscphlp_blockingReceiveEventEx(). */
+                else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_enterReceiveLoop(client->hSession)))
+                {
+                    LOG_WARNING_INT32("vscphlp_enterReceiveLoop failed:", vscphlpRet);
                 }
                 else
                 {
@@ -632,6 +635,12 @@ extern VSCP_TP_ADAPTER_RET vscp_tp_adapter_connect(char const * const ipAddr, ch
         else
         {
             log_printf("Vendor of driver: %s\n", vendorStr);
+        }
+
+        /* Enter receive loop, which is required for vscphlp_blockingReceiveEventEx(). */
+        if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_enterReceiveLoop(client->hSession)))
+        {
+            LOG_WARNING_INT32("vscphlp_enterReceiveLoop failed:", vscphlpRet);
         }
     }
 

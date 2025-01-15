@@ -1,6 +1,6 @@
 /* The MIT License (MIT)
  *
- * Copyright (c) 2014 - 2024 Andreas Merkle
+ * Copyright (c) 2014 - 2025 Andreas Merkle
  * http://www.blue-andi.de
  * vscp@blue-andi.de
  *
@@ -61,7 +61,7 @@ This module contains the main entry point.
 #define MAIN_PROG_NAME          "VSCP logger"
 
 /** Copyright */
-#define MAIN_COPYRIGHT          "(c) 2014 - 2024 Andreas Merkle"
+#define MAIN_COPYRIGHT          "(c) 2014 - 2025 Andreas Merkle"
 
 /** Default log level */
 #define MAIN_LOG_LEVEL_DEFAULT  (LOG_LEVEL_FATAL)
@@ -71,6 +71,9 @@ This module contains the main entry point.
 
 /** Daemon wait time after a command was executed in ms */
 #define MAIN_CMD_WAIT_TIME      250
+
+/** Time for waiting until a event is received in ms */
+#define MAIN_RECEIVE_TIMEOUT    500
 
 /*******************************************************************************
     MACROS
@@ -378,147 +381,136 @@ static void main_loop(long hSession)
         }
         else
         {
-            uint32_t    count       = 0;
             vscpEventEx daemonEvent;
             int         vscphlpRet  = 0;
 
-            /* Check for available events. */
-            if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_isDataAvailable(hSession, &count)))
-            {
-                LOG_ERROR_INT32("Couldn't check for available data: ", vscphlpRet);
-
-                printf("Connection lost.\n");
-                
-                /* Abort */
-                quit = TRUE;
-            }
             /* Any event available? */
-            else if (0 < count)
+            if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_blockingReceiveEventEx(hSession, &daemonEvent, MAIN_RECEIVE_TIMEOUT)))
             {
-                if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_receiveEventEx(hSession, &daemonEvent)))
+                if (VSCP_ERROR_TIMEOUT != vscphlpRet)
                 {
                     LOG_WARNING_INT32("Couldn't receive event: ", vscphlpRet);
                 }
-                else if (((VSCP_CLASS1_LOG == daemonEvent.vscp_class) || ((VSCP_CLASS1_LOG + 512) == daemonEvent.vscp_class)) &&
-                         (VSCP_TYPE_LOG_MESSAGE == daemonEvent.vscp_type) &&
-                         (8 == daemonEvent.sizeData))
+            }
+            else if (((VSCP_CLASS1_LOG == daemonEvent.vscp_class) || ((VSCP_CLASS1_LOG + 512) == daemonEvent.vscp_class)) &&
+                        (VSCP_TYPE_LOG_MESSAGE == daemonEvent.vscp_type) &&
+                        (8 == daemonEvent.sizeData))
+            {
+                uint32_t index = 0;
+
+                log_printf("Rx: %s class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u id=0x%02X level=0x%02X idx=0x%02X data=",
+                    (VSCP_CLASS1_LOG == daemonEvent.vscp_class) ? "L1   " : "L1_L2",
+                    daemonEvent.vscp_class,
+                    daemonEvent.vscp_type,
+                    (daemonEvent.head >> 5) & 0x07,
+                    daemonEvent.GUID[15],
+                    (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
+                    daemonEvent.sizeData,
+                    daemonEvent.data[0],
+                    daemonEvent.data[1],
+                    daemonEvent.data[2]);
+
+                for(index = 3; index < daemonEvent.sizeData; ++index)
                 {
-                    uint32_t index = 0;
+                    printf("%02X", daemonEvent.data[index]);
 
-                    log_printf("Rx: %s class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u id=0x%02X level=0x%02X idx=0x%02X data=",
-                        (VSCP_CLASS1_LOG == daemonEvent.vscp_class) ? "L1   " : "L1_L2",
-                        daemonEvent.vscp_class,
-                        daemonEvent.vscp_type,
-                        (daemonEvent.head >> 5) & 0x07,
-                        daemonEvent.GUID[15],
-                        (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
-                        daemonEvent.sizeData,
-                        daemonEvent.data[0],
-                        daemonEvent.data[1],
-                        daemonEvent.data[2]);
-
-                    for(index = 3; index < daemonEvent.sizeData; ++index)
+                    if ((index + 1) < daemonEvent.sizeData)
                     {
-                        printf("%02X", daemonEvent.data[index]);
-
-                        if ((index + 1) < daemonEvent.sizeData)
-                        {
-                            printf(" ");
-                        }
+                        printf(" ");
                     }
-
-                    printf("\n");
                 }
-                else if (512 > daemonEvent.vscp_class)
+
+                printf("\n");
+            }
+            else if (512 > daemonEvent.vscp_class)
+            {
+                uint32_t index = 0;
+
+                log_printf("Rx: L1    class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
+                    daemonEvent.vscp_class,
+                    daemonEvent.vscp_type,
+                    (daemonEvent.head >> 5) & 0x07,
+                    daemonEvent.GUID[15], /* Node GUID LSB */
+                    (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
+                    daemonEvent.sizeData);
+
+                for(index = 0; index < daemonEvent.sizeData; ++index)
                 {
-                    uint32_t index = 0;
+                    printf("%02X", daemonEvent.data[index]);
 
-                    log_printf("Rx: L1    class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
-                        daemonEvent.vscp_class,
-                        daemonEvent.vscp_type,
-                        (daemonEvent.head >> 5) & 0x07,
-                        daemonEvent.GUID[15], /* Node GUID LSB */
-                        (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
-                        daemonEvent.sizeData);
-
-                    for(index = 0; index < daemonEvent.sizeData; ++index)
+                    if ((index + 1) < daemonEvent.sizeData)
                     {
-                        printf("%02X", daemonEvent.data[index]);
-
-                        if ((index + 1) < daemonEvent.sizeData)
-                        {
-                            printf(" ");
-                        }
+                        printf(" ");
                     }
-
-                    printf("\n");
                 }
-                else if (1024 > daemonEvent.vscp_class)
+
+                printf("\n");
+            }
+            else if (1024 > daemonEvent.vscp_class)
+            {
+                uint32_t index = 0;
+
+                log_printf("Rx: L2_L1 class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
+                    daemonEvent.vscp_class,
+                    daemonEvent.vscp_type,
+                    (daemonEvent.head >> 5) & 0x07,
+                    daemonEvent.GUID[15], /* Node GUID LSB */
+                    (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
+                    daemonEvent.sizeData);
+
+                for(index = 0; index < daemonEvent.sizeData; ++index)
                 {
-                    uint32_t index = 0;
+                    printf("%02X", daemonEvent.data[index]);
 
-                    log_printf("Rx: L2_L1 class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
-                        daemonEvent.vscp_class,
-                        daemonEvent.vscp_type,
-                        (daemonEvent.head >> 5) & 0x07,
-                        daemonEvent.GUID[15], /* Node GUID LSB */
-                        (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
-                        daemonEvent.sizeData);
-
-                    for(index = 0; index < daemonEvent.sizeData; ++index)
+                    if ((index + 1) < daemonEvent.sizeData)
                     {
-                        printf("%02X", daemonEvent.data[index]);
-
-                        if ((index + 1) < daemonEvent.sizeData)
-                        {
-                            printf(" ");
-                        }
+                        printf(" ");
                     }
+                }
 
-                    printf("\n");
+                printf("\n");
+            }
+            else
+            {
+                uint32_t index  = 0;
+                uint8_t  max    = 0;
+
+                log_printf("Rx: L2    class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
+                    daemonEvent.vscp_class,
+                    daemonEvent.vscp_type,
+                    (daemonEvent.head >> 5) & 0x07,
+                    daemonEvent.GUID[15], /* Node GUID LSB */
+                    (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
+                    daemonEvent.sizeData);
+
+                if (8 < daemonEvent.sizeData)
+                {
+                    max = 8;
                 }
                 else
                 {
-                    uint32_t index  = 0;
-                    uint8_t  max    = 0;
-
-                    log_printf("Rx: L2    class=0x%04X type=0x%02X prio=%2d oAddr=0x%02X %c num=%u data=",
-                        daemonEvent.vscp_class,
-                        daemonEvent.vscp_type,
-                        (daemonEvent.head >> 5) & 0x07,
-                        daemonEvent.GUID[15], /* Node GUID LSB */
-                        (0 == ((daemonEvent.head >> 4) & 0x01)) ? '-' : 'h',
-                        daemonEvent.sizeData);
-
-                    if (8 < daemonEvent.sizeData)
-                    {
-                        max = 8;
-                    }
-                    else
-                    {
-                        max = daemonEvent.sizeData;
-                    }
-
-                    for(index = 0; index < max; ++index)
-                    {
-                        printf("%02X", daemonEvent.data[index]);
-
-                        if ((index + 1) < max)
-                        {
-                            printf(" ");
-                        }
-                    }
-
-                    if (8 < daemonEvent.sizeData)
-                    {
-                        printf("...");
-                    }
-
-                    printf("\n");
+                    max = daemonEvent.sizeData;
                 }
 
-                fflush(stdout);
+                for(index = 0; index < max; ++index)
+                {
+                    printf("%02X", daemonEvent.data[index]);
+
+                    if ((index + 1) < max)
+                    {
+                        printf(" ");
+                    }
+                }
+
+                if (8 < daemonEvent.sizeData)
+                {
+                    printf("...");
+                }
+
+                printf("\n");
             }
+
+            fflush(stdout);
 
             /* Give other programs a chance. */
             platform_delay(1);
@@ -671,6 +663,12 @@ static MAIN_RET main_connect(long * const hSession, char const * const ipAddr, c
         else
         {
             printf("Vendor of driver: %s\n", vendorStr);
+        }
+
+        /* Enter receive loop, which is required for vscphlp_blockingReceiveEventEx(). */
+        if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_enterReceiveLoop(*hSession)))
+        {
+            LOG_WARNING_INT32("vscphlp_enterReceiveLoop failed:", vscphlpRet);
         }
     }
 

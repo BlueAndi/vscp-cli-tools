@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 # 
-# Copyright (c) 2014 - 2024 Andreas Merkle
+# Copyright (c) 2014 - 2025 Andreas Merkle
 # http://www.blue-andi.de
 # vscp@blue-andi.de
 # 
@@ -33,7 +33,7 @@
 ################################################################################
 
 # Software version
-VERSION= 0.4.1
+VERSION= 0.5.0
 
 # Binary file name
 BIN= vscpExamplePc
@@ -45,7 +45,8 @@ INCLUDES= -I. \
 		-I../common/vscp-bootloader/src \
 		-I../common/vscphelper \
 		-I../common/vscp-framework/src \
-		-I../common/vscp-framework/src/events
+		-I../common/vscp-framework/src/events \
+		-I/usr/include
 
 # Sources
 SOURCES= main.c \
@@ -121,7 +122,8 @@ BUILDOS= linux
 endif
 
 # Library search path (-L...)
-LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE)
+LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE) \
+		-L/usr/lib
 
 # Libraries (-l...)
 LIBRARIES= -lm -lvscphelper -lexpat
@@ -130,7 +132,7 @@ LIBRARIES= -lm -lvscphelper -lexpat
 ifeq ($(OS),Windows_NT)
 LIBRARIES+= -lws2_32
 else
-LIBRARIES+= -ldl -lexpat -lpthread
+LIBRARIES+= -ldl -lpthread -lssl
 endif
 
 # Preprocessor defines
@@ -150,7 +152,7 @@ CFLAGS= -Wall -ffunction-sections -fdata-sections -fshort-enums -std=gnu99 -funs
 # -Wl,--cref        : Add cross reference to map file
 # -Wl,--gc-sections : Enable garbage collection of unused input sections
 # -Wl,-rpath='$$ORIGIN/../lib/linux' : Set shared object search path
-LDFLAGS= -Wall -Wl,-Map,$(BINDIR)/$(BIN).map -Wl,--cref -Wl,--gc-sections -Wl,-rpath='$$ORIGIN/../../../../common/pc/vscphelper/lib/linux/$(BUILDTYPE)'
+LDFLAGS= -Wall -Wl,-Map,$(BINDIR)/$(BIN).map -Wl,--cref -Wl,--gc-sections
 
 ifeq ($(MAKECMDGOALS),debug)
 

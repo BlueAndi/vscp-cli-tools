@@ -1,6 +1,6 @@
 /* The MIT License (MIT)
  *
- * Copyright (c) 2014 - 2024 Andreas Merkle
+ * Copyright (c) 2014 - 2025 Andreas Merkle
  * http://www.blue-andi.de
  * vscp@blue-andi.de
  *
@@ -64,7 +64,7 @@ This module contains the main entry point.
 #define MAIN_PROG_NAME                  "VSCP L1 programmer"
 
 /** Copyright */
-#define MAIN_COPYRIGHT                  "(c) 2014 - 2024 Andreas Merkle"
+#define MAIN_COPYRIGHT                  "(c) 2014 - 2025 Andreas Merkle"
 
 /** Default log level */
 #define MAIN_LOG_LEVEL_DEFAULT          (LOG_LEVEL_FATAL)
@@ -74,6 +74,9 @@ This module contains the main entry point.
 
 /** Daemon wait time after a command was executed in ms */
 #define MAIN_CMD_WAIT_TIME              250
+
+/** Time for waiting until a event is received in ms */
+#define MAIN_RECEIVE_TIMEOUT            500
 
 /** Level 1 events threshold */
 #define MAIN_VSCP_L1_THRESHOLD          512
@@ -199,6 +202,7 @@ static void main_showKeyTable(void);
 static MAIN_RET main_programming(long hSession, intelHexParser_Record* recSet, uint32_t recNum);
 static MAIN_RET main_connect(long * const hSession, char const * const ipAddr, char const * const user, char const * const password);
 static void main_disconnect(long * const hSession);
+static int main_sendEvent(long hSession, const vscpEventEx* daemonEvent);
 static CMDLINEPARSER_RET main_clpUnknown(void* const userData, char const * const arg, char const * const par);
 static Crc16CCITT main_calculateCrc(intelHexParser_Record* recSet, uint32_t recNum, uint32_t blockSize, BOOL fillBlock);
 static uint32_t main_calculateDataSize(intelHexParser_Record* recSet, uint32_t recNum);
@@ -591,35 +595,27 @@ static MAIN_RET main_programming(long hSession, intelHexParser_Record* recSet, u
         }
         else
         {
-            uint32_t        count       = 0;
             vscpEventEx     daemonEvent;
             vscpEventEx*    rxEvent     = NULL;
             int             vscphlpRet  = 0;
 
-            /* Check for available events. */
-            if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_isDataAvailable(hSession, &count)))
-            {
-                LOG_ERROR_INT32("Couldn't check for available data: ", vscphlpRet);
-
-                printf("Connection lost.\n");
-                
-                /* Abort */
-                quit = TRUE;
-            }
             /* Any event available? */
-            else if (0 < count)
+            if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_blockingReceiveEventEx(hSession, &daemonEvent, MAIN_RECEIVE_TIMEOUT)))
             {
-                if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_receiveEventEx(hSession, &daemonEvent)))
+                if (VSCP_ERROR_TIMEOUT != vscphlpRet)
                 {
                     LOG_WARNING_INT32("Couldn't receive event: ", vscphlpRet);
                 }
-                else if (MAIN_VSCP_L1_THRESHOLD > daemonEvent.vscp_class)
+            }
+            else
+            {
+                if (MAIN_VSCP_L1_THRESHOLD > daemonEvent.vscp_class)
                 {
                     rxEvent = &daemonEvent;
                 }
-            }
 
-            main_programNode(&progCon, hSession, recSet, recNum, rxEvent);
+                main_programNode(&progCon, hSession, recSet, recNum, rxEvent);
+            }
             
             fflush(stdout);
 
@@ -775,6 +771,12 @@ static MAIN_RET main_connect(long * const hSession, char const * const ipAddr, c
         {
             printf("Vendor of driver: %s\n", vendorStr);
         }
+
+        /* Enter receive loop, which is required for vscphlp_blockingReceiveEventEx(). */
+        if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_enterReceiveLoop(*hSession)))
+        {
+            LOG_WARNING_INT32("vscphlp_enterReceiveLoop failed:", vscphlpRet);
+        }
     }
 
     /* Any error happened? */
@@ -815,6 +817,43 @@ static void main_disconnect(long * const hSession)
     }
 
     return;
+}
+
+/**
+ * This function sends a event to the VSCP daemon.
+ * 
+ * @param[in] hSession  Session handle
+ * @param[in] event     Daemon event which to send
+ */
+static int main_sendEvent(long hSession, const vscpEventEx* daemonEvent)
+{
+    int vscphlpRet = VSCP_ERROR_ERROR;
+
+    if (NULL == daemonEvent)
+    {
+        ;
+    }
+    /* Quit receive loop first, to be able to send a event. */
+    else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_quitReceiveLoop(hSession)))
+    {
+        LOG_WARNING_INT32("Couldn't send event to daemon:", vscphlpRet);
+    }
+    /* Send the event. */
+    else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_sendEventEx(hSession, daemonEvent)))
+    {
+        LOG_WARNING_INT32("Couldn't send event to daemon:", vscphlpRet);
+    }
+    /* Enter receive loop again, required for vscphlp_blockingReceiveEventEx(). */
+    else if (VSCP_ERROR_SUCCESS != (vscphlpRet = vscphlp_enterReceiveLoop(hSession)))
+    {
+        LOG_WARNING_INT32("vscphlp_enterReceiveLoop failed:", vscphlpRet);
+    }
+    else
+    {
+        vscphlpRet = VSCP_ERROR_SUCCESS;
+    }
+
+    return vscphlpRet;
 }
 
 /**
@@ -963,7 +1002,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         txEvent.data[3]     = 0x92; /* Page select register */
         txEvent.data[4]     = 2;    /* Page select is a 16-bit value */
 
-        if (VSCP_ERROR_SUCCESS != vscphlp_sendEventEx(hSession, &txEvent))
+        if (VSCP_ERROR_SUCCESS != main_sendEvent(hSession, &txEvent))
         {
             log_printf("Error!\n");
             
@@ -1014,7 +1053,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         txEvent.data[6]     = (progCon->pageSelect >> 8) & 0xff;    /* Register 0x92, page select msb */
         txEvent.data[7]     = (progCon->pageSelect >> 0) & 0xff;    /* Register 0x93, page select lsb */
 
-        if (VSCP_ERROR_SUCCESS != vscphlp_sendEventEx(hSession, &txEvent))
+        if (VSCP_ERROR_SUCCESS != main_sendEvent(hSession, &txEvent))
         {
             log_printf("Error!\n");
             
@@ -1107,7 +1146,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         txEvent.data[4]     = 0;    /* Type of memory to write: Program flash */
         txEvent.data[5]     = 0;    /* Bank/Image to write: Internal flash */
 
-        if (VSCP_ERROR_SUCCESS != vscphlp_sendEventEx(hSession, &txEvent))
+        if (VSCP_ERROR_SUCCESS != main_sendEvent(hSession, &txEvent))
         {
             log_printf("Error!\n");
             
@@ -1200,7 +1239,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
 
         if (MAIN_PRG_STATE_ERROR != progCon->state)
         {
-            if (VSCP_ERROR_SUCCESS != vscphlp_sendEventEx(hSession, &txEvent))
+            if (VSCP_ERROR_SUCCESS != main_sendEvent(hSession, &txEvent))
             {
                 log_printf("Error!\n");
                 
@@ -1300,7 +1339,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         txEvent.data[2]     = (progCon->blockIndex >>  8) & 0xff;
         txEvent.data[3]     = (progCon->blockIndex >>  0) & 0xff;
 
-        if (VSCP_ERROR_SUCCESS != vscphlp_sendEventEx(hSession, &txEvent))
+        if (VSCP_ERROR_SUCCESS != main_sendEvent(hSession, &txEvent))
         {
             log_printf("Error!\n");
             
@@ -1366,7 +1405,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         txEvent.data[0]     = (imageCrc >> 8) & 0xff;  /* CRC MSB */
         txEvent.data[1]     = (imageCrc >> 0) & 0xff;  /* CRC MSB */
 
-        if (VSCP_ERROR_SUCCESS != vscphlp_sendEventEx(hSession, &txEvent))
+        if (VSCP_ERROR_SUCCESS != main_sendEvent(hSession, &txEvent))
         {
             log_printf("Error!\n");
             
@@ -1408,7 +1447,7 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
         txEvent.sizeData    = 1;
         txEvent.data[0]     = progCon->nodeId;
 
-        (void)vscphlp_sendEventEx(hSession, &txEvent);
+        (void)main_sendEvent(hSession, &txEvent);
         
         progCon->state = MAIN_PRG_STATE_IDLE;
         break;

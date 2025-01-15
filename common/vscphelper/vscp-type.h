@@ -16,7 +16,7 @@
  *
  * The MIT License (MIT)
  *
- * Copyright (C) 2000-2021 Ake Hedman, The VSCP Project <info@grodansparadis.com>
+ * Copyright (C) 2000-2022 Ake Hedman, The VSCP Project <info@grodansparadis.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@
             !!!!!!!!!!!!!!!!!!!!  W A R N I N G  !!!!!!!!!!!!!!!!!!!!
                            This file is auto-generated
                 see https://github.com/grodansparadis/vscp-classes
-                        Generated: 2021-10-06 18:25:21.608236
+                        Generated: 2024-12-12 17:07:56.200428
 */
  
 #ifndef VSCP_TYPE_H
@@ -101,8 +101,11 @@
 #define VSCP_TYPE_PROTOCOL_GET_EVENT_INTEREST_RESPONSE 41 /* Get event interest response. */
 #define VSCP_TYPE_PROTOCOL_ACTIVATE_NEW_IMAGE_ACK   48  /* Activate new image ACK. */
 #define VSCP_TYPE_PROTOCOL_ACTIVATE_NEW_IMAGE_NACK  49  /* Activate new image NACK. */
-#define VSCP_TYPE_PROTOCOL_START_BLOCK_ACK          50  /* Block data transfer ACK. */
-#define VSCP_TYPE_PROTOCOL_START_BLOCK_NACK         51  /* Block data transfer NACK. */
+#define VSCP_TYPE_PROTOCOL_START_BLOCK_ACK          50  /* Start Block ACK. */
+#define VSCP_TYPE_PROTOCOL_START_BLOCK_NACK         51  /* Start Block NACK. */
+#define VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_ACK          52  /* Block Data Chunk ACK. */
+#define VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_NACK         53  /* Block Data Chunk NACK. */
+#define VSCP_TYPE_PROTOCOL_BOOT_LOADER_CHECK        54  /* Bootloader CHECK. */
     
 /*  CLASS1.ALARM = 1  -  Alarm functionality */
 #define VSCP_TYPE_ALARM_GENERAL                     0   /* General event */
@@ -595,8 +598,8 @@
 #define VSCP_TYPE_DISPLAY_SHOW_DISPLAY_BUFFER       5   /* Show Display Buffer */
 #define VSCP_TYPE_DISPLAY_SET_DISPLAY_BUFFER_PARAM  6   /* Set Display Buffer Parameter */
 #define VSCP_TYPE_DISPLAY_SHOW_TEXT                 32  /* Show Text */
-#define VSCP_TYPE_DISPLAY_SHOW_LED                  48  /* Set LED */
-#define VSCP_TYPE_DISPLAY_SHOW_LED_COLOR            49  /* Set RGB Color */
+#define VSCP_TYPE_DISPLAY_SET_LED                   48  /* Set LED */
+#define VSCP_TYPE_DISPLAY_SET_COLOR                 49  /* Set RGB Color */
     
 /*  CLASS1.IR = 110  -  IR Remote I/f */
 #define VSCP_TYPE_REMOTE_GENERAL                    0   /* General event */
@@ -916,6 +919,11 @@
 #define VSCP2_TYPE_PROTOCOL_READ_WRITE_RESPONSE     3   /* Read Write Response */
 #define VSCP2_TYPE_PROTOCOL_HIGH_END_SERVER_CAPS    20  /* High end server/service capabilities */
 #define VSCP2_TYPE_PROTOCOL_WHO_IS_THERE_RESPONSE   32  /* Level II who is there response */
+#define VSCP2_TYPE_PROTOCOL_GET_MATRIX_INFO_RESPONSE 34 /* Level II get DM info response */
+#define VSCP2_TYPE_PROTOCOL_GET_EMBEDDED_MDF_RESPONSE 36 /* Level II get embedded MDF response */
+#define VSCP2_TYPE_PROTOCOL_GET_EVENT_INTEREST_RESPONSE 41 /* Level II events of interest response */
+#define VSCP2_TYPE_PROTOCOL_READ_REGISTER_DIRECT    43  /* Read a Level II register from the 32-bit register space direct */
+#define VSCP2_TYPE_PROTOCOL_WRITE_REGISTER_DIRECT   44  /* Write a Level II register to the 32-bit register space direct */
     
 /*  CLASS2.CONTROL = 1025  -  Level II Control */
 #define VSCP2_TYPE_CONTROL_GENERAL                  0   /* General event */
@@ -941,6 +949,10 @@
     
 /*  CLASS2.DISPLAY = 1030  -  Level II Display */
 #define VSCP2_TYPE_DISPLAY_GENERAL                  0   /* General event */
+    
+/*  CLASS2.SECURITY = 1034  -  Level II Security */
+#define VSCP2_TYPE_SECURITY_GENERAL                 0   /* General event */
+#define VSCP2_TYPE_SECURITY_SETKEY                  1   /* Set key */
     
 /*  CLASS2.MEASUREMENT_STR = 1040  -  Level II Measurement string */
 /* 	Event types is the same as  CLASS1.MEASUREMENT = 10  -  Measurement */

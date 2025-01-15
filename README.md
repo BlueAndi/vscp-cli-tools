@@ -16,6 +16,7 @@ Command line interface tools used to maintain or simulate VSCP nodes.
   - [1 Clone The Repository](#1-clone-the-repository)
   - [2 Choose Project](#2-choose-project)
   - [3 Build](#3-build)
+- [Used Libraries](#used-libraries)
 - [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
 - [License](#license)
 - [Contribution](#contribution)
@@ -41,17 +42,21 @@ More information can be found on the main site http://www.vscp.org
 ## Prerequisite
 
 ### Linux
-
-Get the standard gcc build environment:
-```
-$ sudo apt update
-$ sudo apt install build-essential
-```
+1. Open a terminal.
+2. Call ```setup_linux.sh```
 
 ### Windows
 
 1. Install MSYS2 (https://www.msys2.org/) and follow the complete installation instructions there. Only installing the MSYS2 binary is not enough! There are several steps in the MSYS2 shell necessary.
-2. The gcc build environment will be available in the "MSYS MinGW 64-bit" shell.
+2. The gcc build environment will be available in the "MSYS2 MinGW UCRT 64-bit" shell.
+3. Install expat packages:
+    ```bash
+    pacman -S libexpat
+    pacman -S libexpat-devel
+    ```
+4. Install required visual studio runtime packages:
+   * https://aka.ms/vs/17/release/vc_redist.x86.exe
+   * https://aka.ms/vs/17/release/vc_redist.x64.exe
 
 ## 1 Clone The Repository
 
@@ -73,6 +78,14 @@ Choose the project by entering the corresponding folder, e.g. ```/nodeSim```.
 
 Build debug variant with ```make debug``` or use ```make release``` for the release variant.
 The result will be in the ```/<project>/bin``` folder.
+
+# Used Libraries
+
+| Library | Description | License |
+| - | - | - |
+| [Expat](https://github.com/libexpat/libexpat) | Fast streaming XML parser. | MIT |
+| [OpenSSL](https://github.com/openssl/openssl) | OpenSSL is a robust, commercial-grade, full-featured Open Source Toolkit for the TLS (formerly SSL), DTLS and QUIC (currently client side only) protocols. | Apache-2.0 |
+| [vscp-helper-lib](https://github.com/grodansparadis/vscp-helper-lib) | VSCP helper functionality | MIT |
 
 # Issues, Ideas And Bugs
 
