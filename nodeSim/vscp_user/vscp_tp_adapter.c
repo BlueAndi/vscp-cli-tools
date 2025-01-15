@@ -132,7 +132,7 @@ static const char*              vscp_tp_adapter_protocolTypes[] =
     /* 12 */ "Enter Boot Loader Mode",
     /* 13 */ "Enter Boot Loader Mode ACK",
     /* 14 */ "Enter Boot Loader Mode NACK",
-    /* 15 */ "Start Block Data Transfer",
+    /* 15 */ "Start Block",
     /* 16 */ "Block Data",
     /* 17 */ "Block Data ACK",
     /* 18 */ "Block Data NACK",
@@ -167,8 +167,11 @@ static const char*              vscp_tp_adapter_protocolTypes[] =
     /* 47 */ "Reserved",
     /* 48 */ "Activate New Image ACK",
     /* 49 */ "Activate New Image NACK",
-    /* 50 */ "Start Block Data Transfer ACK",
-    /* 51 */ "Start Block Data Transfer NACK"
+    /* 50 */ "Start Block ACK",
+    /* 51 */ "Start Block NACK",
+    /* 52 */ "Block Chunk ACK",
+    /* 53 */ "Block Chunk NACK",
+    /* 54 */ "Boot Loader Check"
 };
 
 /** User friendly strings for VSCP helper library function return status. */
@@ -250,8 +253,6 @@ static const char*                  vscp_tp_adapter_errorStr[]  =
 extern void vscp_tp_adapter_init(void)
 {
     /* Nothing to do */
-
-    return;
 }
 
 /**
@@ -290,6 +291,20 @@ extern BOOL vscp_tp_adapter_readMessage(vscp_RxMessage * const msg)
                     LOG_WARNING_INT32("Couldn't receive event: ", vscphlpRet);
                     LOG_WARNING_STR("vscphlp_receiveEventEx failed: ", vscp_tp_adapter_getErrorStr(vscphlpRet));
                 }
+                /* Any simulated message available? */
+                else if (TRUE == vscp_tp_adapter_messageReceived)
+                {
+                    *msg = vscp_tp_adapter_rxMessage;
+
+                    vscp_tp_adapter_messageReceived = FALSE;
+
+                    status = TRUE;
+                }
+                else
+                {
+                    /* Nothing to do. */
+                    ;
+                }
             }
             /* Handle all level 1 events? */
             else if (VSCP_TP_ADAPTER_LVL_1 == client->lvl)
@@ -318,16 +333,12 @@ extern BOOL vscp_tp_adapter_readMessage(vscp_RxMessage * const msg)
                         status = TRUE;
                     }
                 }
+                else
+                {
+                    /* Skip it. */
+                    ;
+                }
             }
-        }
-        /* Any simulated message available? */
-        else if (TRUE == vscp_tp_adapter_messageReceived)
-        {
-            *msg = vscp_tp_adapter_rxMessage;
-
-            vscp_tp_adapter_messageReceived = FALSE;
-
-            status = TRUE;
         }
 
         if (FALSE != status)
@@ -677,8 +688,6 @@ extern void vscp_tp_adapter_disconnect(void)
     }
 
     vscp_tp_adapter_isConnected = FALSE;
-
-    return;
 }
 
 /**
@@ -690,7 +699,6 @@ extern void vscp_tp_adapter_simulateReceivedMessage(vscp_RxMessage const * const
 {
     vscp_tp_adapter_rxMessage        = *msg;
     vscp_tp_adapter_messageReceived  = TRUE;
-    return;
 }
 
 /*******************************************************************************
@@ -729,7 +737,7 @@ static BOOL vscp_tp_adapter_handleL1Event(vscp_RxMessage * const msg, vscpEventE
     else
     {
         uint8_t index   = 0;
-
+    return;
         msg->vscpClass  = daemonEvent->vscp_class;
         msg->vscpType   = (uint8_t)(daemonEvent->vscp_type & 0xff);
         msg->priority   = (daemonEvent->head >> 5) & 0x07;
@@ -851,8 +859,6 @@ static void vscp_tp_adapter_showMessage(vscp_Message const * const msg, BOOL isR
     }
 
     printf("\n");
-
-    return;
 }
 
 /**
