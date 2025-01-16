@@ -45,6 +45,7 @@ This module contains the main entry point.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "log.h"
 #include "platform.h"
 #include "vscphelperlib.h"
@@ -201,6 +202,9 @@ typedef struct
     uint32_t        recIndexBackup;     /**< Backup of record index, needed for block transfer retry */
     uint32_t        recDataIndexBackup; /**< Backup of record data index, needed for block transfer retry */
 
+    unsigned long   lastTime;           /**< Last time in ms. Used for software timer functionality. */
+    uint8_t         retry;              /**< Number of current retries */
+
 } main_Programming;
 
 /*******************************************************************************
@@ -218,6 +222,7 @@ static CMDLINEPARSER_RET main_clpUnknown(void* const userData, char const * cons
 static Crc16CCITT main_calculateCrc(intelHexParser_Record* recSet, uint32_t recNum, uint32_t blockSize, BOOL fillBlock);
 static uint32_t main_calculateDataSize(intelHexParser_Record* recSet, uint32_t recNum);
 static void main_programNode(main_Programming * const progCon, long hSession, intelHexParser_Record* recSet, uint32_t recNum, vscpEventEx const * const rxEvent);
+static unsigned long main_millis();
 
 /*******************************************************************************
     LOCAL VARIABLES
@@ -984,9 +989,10 @@ static uint32_t main_calculateDataSize(intelHexParser_Record* recSet, uint32_t r
  */
 static void main_programNode(main_Programming * const progCon, long hSession, intelHexParser_Record* recSet, uint32_t recNum, vscpEventEx const * const rxEvent)
 {
-    uint32_t    index       = 0;
-    vscpEventEx txEvent;
-    Crc16CCITT  imageCrc    = 0;
+    uint32_t        index       = 0;
+    vscpEventEx     txEvent;
+    Crc16CCITT      imageCrc    = 0;
+    unsigned long   timeDiff    = 0;
 
     if ((NULL == progCon) ||
         (NULL == recSet))
@@ -1024,6 +1030,12 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
             log_printf("Wait for response.\n");
 
             progCon->state = MAIN_PRG_STATE_READ_REG_PAGE_SELECT_RSP;
+            progCon->lastTime = main_millis();
+
+            if (0 == progCon->retry)
+            {
+                progCon->retry = 3;
+            }
         }
         
         break;
@@ -1043,6 +1055,26 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 progCon->pageSelect |= rxEvent->data[5];
 
                 progCon->state = MAIN_PRG_STATE_ENTER_BOOT_LOADER_MODE;
+            }
+        }
+
+        timeDiff = main_millis() - progCon->lastTime;
+        if (1000 < timeDiff)
+        {
+            log_printf("Timeout!\n");
+
+            if (1 < progCon->retry)
+            {
+                log_printf("Retry.\n");
+
+                progCon->state = MAIN_PRG_STATE_READ_REG_PAGE_SELECT;
+                --progCon->retry;
+            }
+            else
+            {
+                log_printf("Error!\n");
+
+                progCon->state = MAIN_PRG_STATE_ERROR;
             }
         }
         break;
@@ -1075,6 +1107,12 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
             log_printf("Wait for acknowledge.\n");
 
             progCon->state = MAIN_PRG_STATE_ENTER_BOOT_LOADER_MODE_ACK;
+            progCon->lastTime = main_millis();
+
+            if (0 == progCon->retry)
+            {
+                progCon->retry = 3;
+            }
         }
         break;
 
@@ -1140,6 +1178,26 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 progCon->state = MAIN_PRG_STATE_ERROR;
             }
         }
+
+        timeDiff = main_millis() - progCon->lastTime;
+        if (1000 < timeDiff)
+        {
+            log_printf("Timeout!\n");
+
+            if (1 < progCon->retry)
+            {
+                log_printf("Retry.\n");
+
+                progCon->state = MAIN_PRG_STATE_ENTER_BOOT_LOADER_MODE;
+                --progCon->retry;
+            }
+            else
+            {
+                log_printf("Error!\n");
+
+                progCon->state = MAIN_PRG_STATE_ERROR;
+            }
+        }
         break;
 
     case MAIN_PRG_STATE_START_BLOCK:
@@ -1168,6 +1226,12 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
             log_printf("Wait for start block acknowledge.\n");
 
             progCon->state = MAIN_PRG_STATE_START_BLOCK_ACK;
+            progCon->lastTime = main_millis();
+
+            if (0 == progCon->retry)
+            {
+                progCon->retry = 3;
+            }
         }
         break;
 
@@ -1196,6 +1260,26 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                      (0 == rxEvent->sizeData))
             {
                 log_printf("Failed to start block transfer.\n");
+
+                progCon->state = MAIN_PRG_STATE_ERROR;
+            }
+        }
+
+        timeDiff = main_millis() - progCon->lastTime;
+        if (1000 < timeDiff)
+        {
+            log_printf("Timeout!\n");
+
+            if (1 < progCon->retry)
+            {
+                log_printf("Retry.\n");
+
+                progCon->state = MAIN_PRG_STATE_START_BLOCK;
+                --progCon->retry;
+            }
+            else
+            {
+                log_printf("Error!\n");
 
                 progCon->state = MAIN_PRG_STATE_ERROR;
             }
@@ -1269,19 +1353,48 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 log_printf("Wait for block chunk acknowledge.\n");
 
                 progCon->state = MAIN_PRG_STATE_BLOCK_CHUNK_ACK;
+                progCon->lastTime = main_millis();
+
+                if (0 == progCon->retry)
+                {
+                    progCon->retry = 1;
+                }
             }
         }
         break;
 
     case MAIN_PRG_STATE_BLOCK_CHUNK_ACK:
-        if ((NULL != rxEvent) &&
-            (VSCP_CLASS1_PROTOCOL == rxEvent->vscp_class))
         {
-            if (VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_NACK == rxEvent->vscp_type)
+            BOOL isTimeout = FALSE;
+            BOOL isAckReceived = FALSE;
+
+            timeDiff = main_millis() - progCon->lastTime;
+            if (1000 < timeDiff)
             {
-                /* Repeat */
+                isTimeout = TRUE;
             }
-            else if (VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_ACK == rxEvent->vscp_type)
+
+            if ((NULL != rxEvent) &&
+                (VSCP_CLASS1_PROTOCOL == rxEvent->vscp_class))
+            {
+                if (VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_NACK == rxEvent->vscp_type)
+                {
+                    /* Repeat */
+                    log_printf("Repeat data chunk not implemented yet.\n"); /* TODO */
+                }
+                else if (VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_ACK == rxEvent->vscp_type)
+                {
+                    isAckReceived = TRUE;
+                }
+                else
+                {
+                    /* Nothing to do. */
+                    ;
+                }
+            }
+
+            if ((FALSE != isTimeout) ||
+                (FALSE != isAckReceived))
             {
                 ++progCon->blockFragmentIndex;
 
@@ -1291,17 +1404,18 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                     log_printf("Wait for block data acknowledge.\n");
 
                     progCon->state = MAIN_PRG_STATE_BLOCK_DATA_ACK;
+                    progCon->lastTime = main_millis();
+
+                    if (0 == progCon->retry)
+                    {
+                        progCon->retry = 3;
+                    }
                 }
                 /* Block not finished, send next chunk. */
                 else
                 {
                     progCon->state = MAIN_PRG_STATE_BLOCK_DATA;
                 }
-            }
-            else
-            {
-                /* Nothing to do. */
-                ;
             }
         }
         break;
@@ -1352,28 +1466,39 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
                 /* Nothing to do. */
                 ;
             }
+        }
 
-            /* Transfer block again? */
-            if (MAIN_PRG_STATE_START_BLOCK == progCon->state)
+        if (MAIN_PRG_STATE_BLOCK_DATA_ACK == progCon->state)
+        {
+            timeDiff = main_millis() - progCon->lastTime;
+            if (1000 < timeDiff)
             {
-                /* Maximum number of retries reached? */
-                if (MAIN_MAX_BLOCK_TRANSFER_RETRIES <= progCon->blockRetry)
-                {
-                    progCon->state = MAIN_PRG_STATE_ERROR;
-                }
-                else
-                {
-                    log_printf("Transfer block %u again (%u).", progCon->blockIndex, progCon->blockRetry);
+                log_printf("Timeout!\n");
 
-                    /* Restore the position in the intel hex records */
-                    progCon->recIndex        = progCon->recIndexBackup;
-                    progCon->recDataIndex    = progCon->recDataIndexBackup;
-                }
+                progCon->state = MAIN_PRG_STATE_START_BLOCK;
+            }
+        }
+
+        /* Transfer block again? */
+        if (MAIN_PRG_STATE_START_BLOCK == progCon->state)
+        {
+            /* Maximum number of retries reached? */
+            if (MAIN_MAX_BLOCK_TRANSFER_RETRIES <= progCon->blockRetry)
+            {
+                progCon->state = MAIN_PRG_STATE_ERROR;
             }
             else
             {
-                progCon->blockRetry = 0;
+                log_printf("Transfer block %u again (%u).\n", progCon->blockIndex, progCon->blockRetry);
+
+                /* Restore the position in the intel hex records */
+                progCon->recIndex        = progCon->recIndexBackup;
+                progCon->recDataIndex    = progCon->recDataIndexBackup;
             }
+        }
+        else
+        {
+            progCon->blockRetry = 0;
         }
         break;
 
@@ -1511,4 +1636,16 @@ static void main_programNode(main_Programming * const progCon, long hSession, in
     }
 
     return;
+}
+
+/**
+ * Get the current time in milliseconds.
+ * 
+ * @return unsigned long 
+ */
+static unsigned long main_millis()
+{
+    clock_t now = clock();
+
+    return (((unsigned long)now) * 1000UL) / CLOCKS_PER_SEC;
 }
