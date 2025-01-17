@@ -67,6 +67,16 @@ This module contains the main entry point.
     CONSTANTS
 *******************************************************************************/
 
+#ifndef VERSION
+/** Version */
+#define VERSION "x.x.x"
+#endif /* VERSION */
+
+#ifndef BUILDTYPE
+/** Build type */
+#define BUILDTYPE "debug"
+#endif /* BUILDTYPE */
+
 /** Program name */
 #define MAIN_PROG_NAME          "VSCP level 1 node"
 
