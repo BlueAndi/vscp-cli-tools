@@ -48,16 +48,18 @@ More information can be found on the main site [http://www.vscp.org](http://www.
 
 #### Windows
 
-1. Install MSYS2 (https://www.msys2.org/) and follow the complete installation instructions there. Only installing the MSYS2 binary is not enough! There are several steps in the MSYS2 shell necessary.
-2. The gcc build environment will be available in the "MSYS2 MinGW UCRT 64-bit" shell.
-3. Install expat packages:
+1. Install MSYS2 ([https://www.msys2.org/](https://www.msys2.org/)) and follow the complete installation instructions there. Only installing the MSYS2 binary is not enough! There are several steps in the MSYS2 shell necessary.
+2. The gcc build environment will be available in the "MSYS2 MinGW UCRT 64-bit" shell. Use this shell for all following steps and for building.
+3. Install the tool chain and the expat package:
+
     ```bash
-    pacman -S libexpat
-    pacman -S libexpat-devel
+    pacman -S mingw-w64-ucrt-x86_64-gcc
+    pacman -S mingw-w64-ucrt-x86_64-make
+    pacman -S mingw-w64-ucrt-x86_64-expat
     ```
-4. Install required visual studio runtime packages:
-   * https://aka.ms/vs/17/release/vc_redist.x86.exe
-   * https://aka.ms/vs/17/release/vc_redist.x64.exe
+
+4. Install the required visual studio runtime package, which the VSCP helper library depends on:
+    - [https://aka.ms/vs/17/release/vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)
 
 ### 1 Clone The Repository
 
@@ -81,6 +83,8 @@ Choose the project by entering the corresponding folder, e.g. ```/nodeSim```.
 
 Build debug variant with ```make debug``` or use ```make release``` for the release variant.
 The result will be in the ```/<project>/bin``` folder.
+
+On windows the MSYS2 MinGW UCRT 64-bit environment provides ```mingw32-make```, therefore use ```mingw32-make debug``` resp. ```mingw32-make release``` there.
 
 ## Used Libraries
 
@@ -107,10 +111,10 @@ The headers in the Debian package and in the Windows archive are identical.
 Note that the Windows release archive contains neither an import library nor all DLLs which ```libvscphelper15.dll``` depends on. Therefore:
 
 - The tools link directly against the DLL, see ```-l:libvscphelper15.dll``` in the makefiles.
-- ```libcrypto-3-x64.dll``` and ```libssl-3-x64.dll``` are taken from the MSYS2 MinGW UCRT 64-bit environment (```/ucrt64/bin```).
+- ```libcrypto-3-x64.dll``` and ```libssl-3-x64.dll``` are taken from the MSYS2 MinGW UCRT 64-bit environment (```/ucrt64/bin```), provided by the ```mingw-w64-ucrt-x86_64-openssl``` package.
 - ```libexpat.dll``` and ```pthreadVCE3.dll``` are still the ones which were delivered with v15.0.0.
 
-The Microsoft Visual C++ runtime DLLs are not part of the repository, because they are installed by the visual studio runtime packages, see the Windows prerequisites.
+The Microsoft Visual C++ runtime DLLs are not part of the repository, because they are installed by the visual studio runtime package, see the Windows prerequisites.
 
 ## Issues, Ideas And Bugs
 
