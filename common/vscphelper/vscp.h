@@ -5,7 +5,7 @@
 
  The MIT License (MIT)
 
- Copyright (C) 2000-2024 Ake Hedman, the VSCP project <info@vscp.org>
+ Copyright (C) 2000-2026 Ake Hedman and contributors, the VSCP project <info@vscp.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,10 +36,7 @@
 #ifndef _VSCP_H_
 #define _VSCP_H_
 
-#include <canal.h>
 #include <inttypes.h>
-#include <vscp-class.h>
-#include <vscp-type.h>
 
 #define VSCP_DEFAULT_UDP_PORT        33333
 #define VSCP_DEFAULT_TCP_PORT        9598
@@ -49,8 +46,8 @@
 #define VSCP_ADDRESS_SEGMENT_CONTROLLER 0x00
 #define VSCP_ADDRESS_NEW_NODE           0xff
 
-#define VSCP_MAX_DATA  (512) /* was 487 */
-#define VSCP_SIZE_GUID (16)  /* GUID array size */
+#define VSCP_MAX_DATA  (512)
+#define VSCP_SIZE_GUID (16) /* GUID array size */
 
 #define VSCP_LEVEL1 0 /* Changed 151104  Was 1/2 */
 #define VSCP_LEVEL2 1
@@ -61,34 +58,24 @@ extern "C" {
 
 /*          * * * General structure for VSCP * * *   */
 
-/* This structure is for VSCP Level II   */
+/*
+  This structure is for VSCP Level II
+*/
 
-typedef struct _vscpEvent {
-  uint16_t crc; /* crc checksum (calculated from here to end) */
-                /* Used for UDP/Ethernet etc */
-
-  uint32_t obid; /* Used by driver for channel info etc. */
-
-  /* Time block - Always UTC time */
-  uint16_t year;
-  uint8_t month;  /* 1-12 */
-  uint8_t day;    /* 1-31 */
-  uint8_t hour;   /* 0-23 */
-  uint8_t minute; /* 0-59 */
-  uint8_t second; /* 0-59 */
-
-  uint32_t timestamp; /* Relative time stamp for package in microseconds */
-                      /* ~71 minutes before roll over */
-
-  /* ----- CRC should be calculated from here to end + data block ----  */
+typedef struct _vscp_event_t {
 
   /*
       Bit 15 - This is a dumb node. No MDF, register, nothing.
+
+      -------------------------------------------
+      GUID types: 0-7 (see defined below)
+      -------------------------------------------
       Bit 14 - GUID type
       Bit 13 - GUID type
-      Bit 12 - GUID type (GUID is IP v.6 address.)
-      Bit 8-11 = Reserved
-      Bit 765 =  priority, Priority 0-7 where 0 is highest.
+      Bit 12 - GUID type
+      Bit 10-11 - Reserved
+      Bit 8-9 - Frame version. (0 = original, 1 = frame with Unix ns timestamp, 2 = reserved, 3 = reserved)
+      Bit 765 =  priority, Priority 0-7 where 0 is highest priority.
       Bit 4 = hard coded, true for a hard coded device.
       Bit 3 = Don't calculate CRC, false for CRC usage.
             Just checked when CRC is used.
@@ -100,6 +87,32 @@ typedef struct _vscpEvent {
   */
   uint16_t head;
 
+  /* ----- CRC should be calculated from here to end + data block ----  */
+
+  uint32_t obid; /* Used by driver for channel info etc. */
+
+  /*
+    Time block - Always UTC time. I all zero set current time on receiving end
+
+    If year is set to 0xffff a unix UTC timestamp with nanosecond precision is formed by the
+    eight byte buffer starting at the day field MSB first.
+  */
+  uint16_t year; /* set to 0xffff for UTC timestamp with nanosecond precision */
+  uint8_t month; /* 1-12 set to 0xff for UTC timestamp with nanosecond precision */
+
+  union {
+    uint64_t timestamp_ns; /* Unix timestamp with nanosecond precision (when frame version = 1) */
+    struct {
+      uint8_t day;        /* 1-31 */
+      uint8_t hour;       /* 0-23 */
+      uint8_t minute;     /* 0-59 */
+      uint8_t second;     /* 0-59 */
+      uint32_t timestamp; /* Relative time stamp for package in microseconds */
+                          /* ~71 minutes before roll over */
+                          /* If all zero set relative time on receiving end */
+    };
+  };
+
   uint16_t vscp_class; /* VSCP class */
   uint16_t vscp_type;  /* VSCP type */
   uint8_t GUID[16];    /* Node globally unique id MSB(0) -> LSB(15) */
@@ -107,42 +120,32 @@ typedef struct _vscpEvent {
 
   uint8_t *pdata; /* Pointer to data. Max 512 bytes */
 
-} vscpEvent;
+  uint16_t crc; /* Rarely used */
 
-typedef vscpEvent *PVSCPEVENT;
+} vscp_event_t;
+
+typedef vscp_event_t vscpEvent; // For backward compability
+typedef const vscp_event_t *PCVSCPEVENT;
 
 /*
     WARNING!!!
     This structure is for VSCP Level II with data embedded == big!!!
  */
 
-typedef struct _vscpEventEx {
+typedef struct _vscp_event_ex_t {
 
-  uint16_t crc; /* CRC checksum (calculated from here to end) */
-                /* Used for UDP/Ethernet etc */
-
-  uint32_t obid; /* Used by driver for channel info etc. */
-
-  /* Time block - Always UTC time */
-  uint16_t year;
-  uint8_t month;  /* 1-12 */
-  uint8_t day;    /* 1-31 */
-  uint8_t hour;   /* 0-23 */
-  uint8_t minute; /* 0-59 */
-  uint8_t second; /* 0-59 */
-
-  uint32_t timestamp; /* Relative time stamp for package in microseconds. */
-                      /* ~71 minutes before roll over */
-
-  /* CRC should be calculated from here to end + data block */
-  uint16_t head; /* Bit 15   GUID is IP v.6 address. */
   /*
       Bit 15 - This is a dumb node. No MDF, register, nothing.
+
+      -------------------------------------------
+      GUID types: 0-7 (see defined below)
+      -------------------------------------------
       Bit 14 - GUID type
       Bit 13 - GUID type
-      Bit 12 - GUID type (GUID is IP v.6 address.)
-      Bit 8-11 = Reserved
-      Bit 765 =  priority, Priority 0-7 where 0 is highest.
+      Bit 12 - GUID type
+      Bit 10-11 - Reserved
+      Bit 8-9 - Frame version. (0 = original, 1 = frame with Unix ns timestamp, 2 = reserved, 3 = reserved)
+      Bit 765 =  priority, Priority 0-7 where 0 is highest priority.
       Bit 4 = hard coded, true for a hard coded device.
       Bit 3 = Don't calculate CRC, false for CRC usage.
             Just checked when CRC is used.
@@ -152,6 +155,36 @@ typedef struct _vscpEventEx {
       Bit 1 = Rolling index.
       Bit 0 = Rolling index.
   */
+  uint16_t head;
+
+  /* CRC should be calculated from here to end + data block */
+
+  uint32_t obid; /* Used by driver for channel info etc. */
+
+  /*
+    Time block - Always UTC time. I all zero set current time on receiving end
+
+    If year is set to 0xffff a unix UTC timestamp with nanosecond precision is formed by the eight
+    byte buffer starting at the day field MSB first.
+  */
+  uint16_t year; /* set to 0xffff for UTC timestamp with nanosecond precision */
+  uint8_t month; /* 1-12 set to 0xff for UTC timestamp with nanosecond precision */
+
+  union {
+    uint64_t timestamp_ns; /* Unix timestamp with nanosecond precision (when frame version = 1) */
+    struct {
+      uint8_t day;        /* 1-31 */
+      uint8_t hour;       /* 0-23 */
+      uint8_t minute;     /* 0-59 */
+      uint8_t second;     /* 0-59 */
+      uint32_t timestamp; /* Relative time stamp for package in microseconds */
+                          /* ~71 minutes before roll over */
+                          /* If all zero set relative time on receiving end */
+    };
+  };
+
+  uint16_t crc; /* Rarely used */
+
   uint16_t vscp_class; /* VSCP class   */
   uint16_t vscp_type;  /* VSCP type    */
   uint8_t GUID[16];    /* Node globally unique id MSB(0) -> LSB(15)    */
@@ -159,9 +192,10 @@ typedef struct _vscpEventEx {
 
   uint8_t data[VSCP_MAX_DATA]; /* Pointer to data. Max. 512 bytes     */
 
-} vscpEventEx;
+} vscp_event_ex_t;
 
-typedef vscpEventEx *PVSCPEVENTEX;
+typedef vscp_event_ex_t vscpEventEx; // For backward compability
+typedef const vscp_event_ex_t *PCVSCPEVENTEX;
 
 /* Priorities in the header byte as or'in values */
 /* Priorities goes from 0-7 where 0 is highest   */
@@ -186,29 +220,37 @@ typedef vscpEventEx *PVSCPEVENTEX;
 
 #define VSCP_NO_CRC_CALC 0x08 /* If set no CRC is calculated */
 
-#define VSCP_HEADER16_DUMB      0x8000 /* This node is dumb */
-#define VSCP_HEADER16_IPV6_GUID 0x1000 /* GUID is IPv6 address */
+#define VSCP_HEADER16_DUMB      0x8000u /* This node is dumb */
+#define VSCP_HEADER16_IPV6_GUID 0x1000u /* GUID is IPv6 address */
 
 /* Bits 14/13/12 for GUID type */
-#define VSCP_HEADER16_GUID_TYPE_STANDARD 0x0000 /* VSCP standard GUID */
-#define VSCP_HEADER16_GUID_TYPE_IPV6     0x1000 /* GUID is IPv6 address */
+#define VSCP_HEADER16_GUID_TYPE_STANDARD 0x0000u /* VSCP standard GUID */
+#define VSCP_HEADER16_GUID_TYPE_IPV6     0x1000u /* GUID is IPv6 address */
 /* https://www.sohamkamani.com/blog/2016/10/05/uuid1-vs-uuid4/ */
-#define VSCP_HEADER16_GUID_TYPE_RFC4122V1 0x2000 /* GUID is RFC 4122 Version 1 */
-#define VSCP_HEADER16_GUID_TYPE_RFC4122V4 0x3000 /* GUID is RFC 4122 Version 4 */
+#define VSCP_HEADER16_GUID_TYPE_RFC4122V1 0x2000u /* GUID is RFC 4122 Version 1 */
+#define VSCP_HEADER16_GUID_TYPE_RFC4122V4 0x3000u /* GUID is RFC 4122 Version 4 */
+#define VSCP_HEADER16_GUID_TYPE_RANDOM    0x4000u /* GUID is random number (not recommended) */
+
+// Frame version bits (8-9)
+#define VSCP_HEADER16_FRAME_VERSION_MASK     0x0300u
+#define VSCP_HEADER16_FRAME_VERSION_ORIGINAL 0x0000u /* Original frame format */
+#define VSCP_HEADER16_FRAME_VERSION_UNIX_NS  0x0100u /* Frame with Unix timestamp with nanosecond precision */
+#define VSCP_HEADER16_FRAME_VERSION_2        0x0200u /* Reserved */
+#define VSCP_HEADER16_FRAME_VERSION_3        0x0300u /* Reserved */
 
 #define VSCP_MASK_PRIORITY  0xE0
 #define VSCP_MASK_GUID_TYPE 0x8000
 #define VSCP_MASK_HARDCODED 0x10
 #define VSCP_MASK_NOCRCCALC 0x08
 
-#define VSCP_LEVEL1_MAXDATA 8
+#define VSCP_LEVEL1_MAXDATA (8)
 #define VSCP_LEVEL2_MAXDATA (512)
 
-#define VSCP_NOCRC_CALC_DUMMY_CRC 0xAA55 /* If no CRC cal bit is set the CRC value */
+#define VSCP_NOCRC_CALC_DUMMY_CRC 0xAA55 /* If no CRC calc bit is set the CRC value */
                                          /* should be set to this value for the CRC  */
                                          /* calculation to be skipped. */
 
-#define VSCP_CAN_ID_HARD_CODED 0x02000000 /* Hard coded bit in CAN frame id */
+#define VSCP_CAN_ID_HARD_CODED 0x02000000u /* Hard coded bit in CAN frame id */
 
 /* GUID byte positions */
 #define VSCP_GUID_MSB 0
@@ -232,9 +274,10 @@ typedef struct _vscpEventFilter {
                               nickname id */
   uint8_t mask_GUID[16];   /* when interfacing the VSCP daemon. */
 
-} vscpEventFilter;
+} vscp_event_filter_t;
 
-typedef vscpEventFilter *PVSCPEVENTFILTER;
+typedef vscp_event_filter_t vscpEventFilter;
+typedef vscp_event_filter_t *PVSCPEVENTFILTER;
 
 /*
     Statistics
@@ -251,13 +294,13 @@ typedef struct structVSCPStatistics {
   unsigned long x;                 /* Currently undefined value */
   unsigned long y;                 /* Currently undefined value */
   unsigned long z;                 /* Currently undefined value */
-} VSCPStatistics;
+} vscp_statistics_t;
 
-typedef VSCPStatistics *PVSCPSTATISTICS;
+typedef vscp_statistics_t VSCPStatistics;
+typedef vscp_statistics_t *PVSCPSTATISTICS;
 
 /*
-    VSCPStatus
-
+    VSCPStatus (info command)
     This is the general channel state structure
 */
 
@@ -268,9 +311,10 @@ typedef struct structVSCPStatus {
   unsigned long lasterrorcode;                      /* Last error code */
   unsigned long lasterrorsubcode;                   /* Last error sub code */
   char lasterrorstr[VSCP_STATUS_ERROR_STRING_SIZE]; /* Last error string */
-} VSCPStatus;
+} vscp_status_t;
 
-typedef VSCPStatus *PVSCPSTATUS;
+typedef vscp_status_t VSCPStatus;
+typedef vscp_status_t *PVSCPSTATUS;
 
 /* VSCP LEVEL II UDP datagram offsets     */
 /*  Same format as multicast i used below */
@@ -279,16 +323,30 @@ typedef VSCPStatus *PVSCPSTATUS;
     VSCP Channel Info
 
     This is the channel VSCP Info structure
+
+    **Deprecated** use vscp_interface_info_t instead.
 */
 
 typedef struct structVSCPChannelInfo {
   unsigned char channelType; /* Level I, Level II etc. from canal.h  */
-  unsigned short channel;    /* daemon channel number */
+  unsigned short channel;    /* Device channel number */
   char GUID[16];             /* Channel GUID id */
 
-} VSCPChannelInfo;
+} vscp_channel_info_t;
 
-typedef VSCPChannelInfo *PVSCPCHANNELINFO;
+typedef vscp_channel_info_t VSCPChannelInfo;
+typedef vscp_channel_info_t *PVSCPCHANNELINFO;
+
+/**
+ * @brief VSCP TCP/IP link interface description
+ * Describes one interface
+ */
+typedef struct vscp_interface_info {
+  uint16_t idx;
+  uint16_t type;
+  uint8_t guid[16];
+  char description[64];
+} vscp_interface_info_t;
 
 /* Interface types */
 #define VSCP_INTERFACE_TYPE_UNKNOWN        0
@@ -314,53 +372,60 @@ typedef VSCPChannelInfo *PVSCPCHANNELINFO;
 #define VSCP_ENCRYPTION_TOKEN_2 "AES192"
 #define VSCP_ENCRYPTION_TOKEN_3 "AES256"
 
-/* * * * Multicast on VSCP reserved IP 224.0.23.158 */
+/*
+  Multicast binary frame
+  ----------------------
 
+  Use the VSCP general binary frame packet position instead of the multicast packet
+  position for the fields that are common between the two frame types. The multicast
+  packet type and encryption type is coded in the first byte of the head field. The
+  multicast packet type is coded in the four most significant bits and the encryption
+  type is coded in the four least significant bits.
+*/
+
+/* * * * Multicast on VSCP reserved IP */
 #define VSCP_MULTICAST_IPV4_ADDRESS_STR "224.0.23.158"
 
 /* Packet frame format type = 0                         */
 /*      without byte0 and CRC                           */
 /*      total frame size is 1 + 34 + 2 + data-length    */
-#define VSCP_MULTICAST_PACKET0_HEADER_LENGTH 35
+// #define VSCP_MULTICAST_PACKET0_HEADER_LENGTH 35
 
 /* Multicast packet ordinals */
-#define VSCP_MULTICAST_PACKET0_POS_PKTTYPE        0
-#define VSCP_MULTICAST_PACKET0_POS_HEAD           1
-#define VSCP_MULTICAST_PACKET0_POS_HEAD_MSB       1
-#define VSCP_MULTICAST_PACKET0_POS_HEAD_LSB       2
-#define VSCP_MULTICAST_PACKET0_POS_TIMESTAMP      3
-#define VSCP_MULTICAST_PACKET0_POS_YEAR           7
-#define VSCP_MULTICAST_PACKET0_POS_YEAR_MSB       7
-#define VSCP_MULTICAST_PACKET0_POS_YEAR_LSB       8
-#define VSCP_MULTICAST_PACKET0_POS_MONTH          9
-#define VSCP_MULTICAST_PACKET0_POS_DAY            10
-#define VSCP_MULTICAST_PACKET0_POS_HOUR           11
-#define VSCP_MULTICAST_PACKET0_POS_MINUTE         12
-#define VSCP_MULTICAST_PACKET0_POS_SECOND         13
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_CLASS     14
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_CLASS_MSB 14
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_CLASS_LSB 15
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_TYPE      16
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_TYPE_MSB  16
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_TYPE_LSB  17
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_GUID      18
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_SIZE      34
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_SIZE_MSB  34
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_SIZE_LSB  35
-#define VSCP_MULTICAST_PACKET0_POS_VSCP_DATA      36
-
+// #define VSCP_MULTICAST_PACKET0_POS_PKTTYPE        0
+// #define VSCP_MULTICAST_PACKET0_POS_HEAD           1
+// #define VSCP_MULTICAST_PACKET0_POS_HEAD_MSB       1
+// #define VSCP_MULTICAST_PACKET0_POS_HEAD_LSB       2
+// #define VSCP_MULTICAST_PACKET0_POS_TIMESTAMP      3
+// #define VSCP_MULTICAST_PACKET0_POS_YEAR           7
+// #define VSCP_MULTICAST_PACKET0_POS_YEAR_MSB       7
+// #define VSCP_MULTICAST_PACKET0_POS_YEAR_LSB       8
+// #define VSCP_MULTICAST_PACKET0_POS_MONTH          9
+// #define VSCP_MULTICAST_PACKET0_POS_DAY            10
+// #define VSCP_MULTICAST_PACKET0_POS_HOUR           11
+// #define VSCP_MULTICAST_PACKET0_POS_MINUTE         12
+// #define VSCP_MULTICAST_PACKET0_POS_SECOND         13
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_CLASS     14
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_CLASS_MSB 14
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_CLASS_LSB 15
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_TYPE      16
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_TYPE_MSB  16
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_TYPE_LSB  17
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_GUID      18
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_SIZE      34
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_SIZE_MSB  34
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_SIZE_LSB  35
+// #define VSCP_MULTICAST_PACKET0_POS_VSCP_DATA      36
 /* Two byte CRC follow here and if the frame is encrypted */
-/* the initialization vector follows. */
+/* the initialization vector (16 bytes) follows the CRC. */
 
 // Maximum packet size (for buffer allocation)
-#define VSCP_MULTICAST_PACKET0_MAX (1 + VSCP_MULTICAST_PACKET0_HEADER_LENGTH + 2 + VSCP_LEVEL2_MAXDATA + 16)
+// #define VSCP_MULTICAST_PACKET0_MAX (1 + VSCP_MULTICAST_PACKET0_HEADER_LENGTH + 2 + VSCP_LEVEL2_MAXDATA + 16)
 
 /* VSCP multicast packet types */
-#define VSCP_MULTICAST_TYPE_EVENT 0
-
-#define SET_VSCP_MULTICAST_TYPE(type, encryption)  ((type << 4) | encryption)
-#define GET_VSCP_MULTICAST_PACKET_TYPE(type)       ((type >> 4) & 0x0f)
-#define GET_VSCP_MULTICAST_PACKET_ENCRYPTION(type) ((type) &0x0f)
+#define VSCP_MULTICAST_TYPE_EVENT0 0
+#define VSCP_MULTICAST_TYPE_EVENT1 1
+#define VSCP_MULTICAST_TYPE_EVENT  0 /* Legacy alias */
 
 /* Multicast proxy CLASS=1026, TYPE=3  */
 /* https://www.vscp.org/docs/vscpspec/doku.php?id=class2.information#type_3_0x0003_level_ii_proxy_node_heartbeat
@@ -373,11 +438,105 @@ typedef VSCPChannelInfo *PVSCPCHANNELINFO;
 #define VSCP_MULTICAST_PROXY_HEARTBEAT_POS_IFNAME   128 /* Name of interface */
 
 /*
-  Default key for VSCP Server - !!!! should only be used on test systems !!!!
+  VSCP general binary packet
+  --------------------------
+
+  * **Packet types** are defined in the first bytes high nibble of each frame.
+  * **Frame types** are defined in the header field of the frame. The frame type is identified
+    by the frame version bits in the head field. The frame version bits are bits 8 and 9 of
+    the head field. For frame type 0 these bits are 00 and for frame type 1 these bits are 01.
+
+  There are two frame types
+
+  0 - Original frame format with 32-bit timestamp in milliseconds plus the year, month, day, hour,
+      minute and second fields.
+  1 - Frame format with Unix timestamp with nanosecond precision since epoch
+
+  The frame types are identified by the frame version bits in the head field. The frame version
+  bits are bits 8 and 9 of the head field. For frame type 0 these bits are 00 and for frame
+  type 1 these bits are 01.
+*/
+
+// Helper macros
+#define SET_VSCP_BINARY_TYPE(type, encryption)  ((type << 4) | encryption)
+#define GET_VSCP_BINARY_PACKET_TYPE(type)       ((type >> 4) & 0x0f)
+#define GET_VSCP_BINARY_PACKET_ENCRYPTION(type) ((type) & 0x0f)
+
+// Packet types in the first bytes high nibble of the head field for binary packets
+#define VSCP_BINARY_PACKET_TYPE_EVENT    0x00 // Events
+#define VSCP_BINARY_PACKET_TYPE_COMMAND  0xe0 // Commands
+#define VSCP_BINARY_PACKET_TYPE_RESPONSE 0xf0 // Replies to commands
+
+/* Packet frame format type = 1 (UNIX_NS nanosecond timestamp)  */
+/*      without byte0 and CRC                                   */
+/*      total frame size is 1 + 35 + 2 + data-length            */
+#define VSCP_BINARY_PACKET_FRAME0_HEADER_LENGTH 35
+
+/* Binary packet frame 0/1 ordinals */
+#define VSCP_BINARY_PACKET_FRAME0_POS_PKTTYPE  0
+#define VSCP_BINARY_PACKET_FRAME0_POS_HEAD     1
+#define VSCP_BINARY_PACKET_FRAME0_POS_HEAD_MSB 1
+#define VSCP_BINARY_PACKET_FRAME0_POS_HEAD_LSB 2
+
+// Frame type = 0 specific ordinals
+#define VSCP_BINARY_PACKET_FRAME0_POS_TIMESTAMP 3
+#define VSCP_BINARY_PACKET_FRAME0_POS_YEAR      7
+#define VSCP_BINARY_PACKET_FRAME0_POS_YEAR_MSB  7
+#define VSCP_BINARY_PACKET_FRAME0_POS_YEAR_LSB  8
+#define VSCP_BINARY_PACKET_FRAME0_POS_MONTH     9
+#define VSCP_BINARY_PACKET_FRAME0_POS_DAY       10
+#define VSCP_BINARY_PACKET_FRAME0_POS_HOUR      11
+#define VSCP_BINARY_PACKET_FRAME0_POS_MINUTE    12
+#define VSCP_BINARY_PACKET_FRAME0_POS_SECOND    13
+
+// Frame type = 1 specific ordinals
+#define VSCP_BINARY_PACKET_FRAME1_POS_TIMESTAMP 3  /* 64-bit nanosecond timestamp */
+#define VSCP_BINARY_PACKET_FRAME1_POS_RESERVED1 11 /* Reserved byte 1 */
+#define VSCP_BINARY_PACKET_FRAME1_POS_RESERVED2 12 /* Reserved byte 2 */
+#define VSCP_BINARY_PACKET_FRAME1_POS_RESERVED3 13 /* Reserved byte 3 */
+
+// Common ordinals for frame type 0 and 1
+#define VSCP_BINARY_PACKET_FRAME0_POS_CLASS     14
+#define VSCP_BINARY_PACKET_FRAME0_POS_CLASS_MSB 14
+#define VSCP_BINARY_PACKET_FRAME0_POS_CLASS_LSB 15
+#define VSCP_BINARY_PACKET_FRAME0_POS_TYPE      16
+#define VSCP_BINARY_PACKET_FRAME0_POS_TYPE_MSB  16
+#define VSCP_BINARY_PACKET_FRAME0_POS_TYPE_LSB  17
+#define VSCP_BINARY_PACKET_FRAME0_POS_GUID      18
+#define VSCP_BINARY_PACKET_FRAME0_POS_SIZE      34
+#define VSCP_BINARY_PACKET_FRAME0_POS_SIZE_MSB  34
+#define VSCP_BINARY_PACKET_FRAME0_POS_SIZE_LSB  35
+#define VSCP_BINARY_PACKET_FRAME0_POS_DATA      36
+/* Two byte CRC follow here and if the frame is encrypted */
+/* the initialization vector (16 bytes) follows the CRC. */
+
+// Maximum packet1 size (for buffer allocation)
+#define VSCP_BINARY_PACKET0_MAX (1 + VSCP_BINARY_PACKET1_HEADER_LENGTH + 2 + VSCP_LEVEL2_MAXDATA + 16)
+
+// Command packet ordinals
+#define VSCP_BINARY_COMMAND_PACKET_POS_PKTTYPE     0 /* Packet type is in the first byte of the head field */
+#define VSCP_BINARY_COMMAND_PACKET_POS_COMMAND_MSB 1 /* Command code MSB */
+#define VSCP_BINARY_COMMAND_PACKET_POS_COMMAND_LSB 2 /* Command code LSB */
+#define VSCP_BINARY_COMMAND_PACKET_POS_ARG         3 /* Command argument starts here */
+/* Two byte CRC follow here and if the frame is encrypted */
+/* the initialization vector (16 bytes) follows the CRC. */
+
+// Response packet ordinals
+#define VSCP_BINARY_RESPONSE_PACKET_POS_PKTTYPE     0 /* Packet type is in the first byte of the head field */
+#define VSCP_BINARY_RESPONSE_PACKET_POS_COMMAND_MSB 1 /* Command code MSB */
+#define VSCP_BINARY_RESPONSE_PACKET_POS_COMMAND_LSB 2 /* Command code LSB */
+#define VSCP_BINARY_RESPONSE_PACKET_POS_ERROR_MSB   3 /* Error code MSB */
+#define VSCP_BINARY_RESPONSE_PACKET_POS_ERROR_LSB   4 /* Error code LSB */
+#define VSCP_BINARY_RESPONSE_PACKET_POS_ARG         5 /* Command argument starts here */
+/* Two byte CRC follow here and if the frame is encrypted */
+/* the initialization vector (16 bytes) follows the CRC. */
+
+/*
+  Default encryption keys for VSCP Server - !!!! should only be used on test systems !!!!
  */
-#define VSCP_DEFAULT_KEY16 "A4A86F7D7E119BA3F0CD06881E371B98"
-#define VSCP_DEFAULT_KEY24 "A4A86F7D7E119BA3F0CD06881E371B989B33B6D606A863B6"
-#define VSCP_DEFAULT_KEY32 "A4A86F7D7E119BA3F0CD06881E371B989B33B6D606A863B633EF529D64544F8E"
+#define VSCP_DEFAULT_KEY16 "A4A86F7D7E119BA3F0CD06881E371B98"                                 // AES-128 key (16 bytes)
+#define VSCP_DEFAULT_KEY24 "A4A86F7D7E119BA3F0CD06881E371B989B33B6D606A863B6"                 // AES-192 key (24 bytes)
+#define VSCP_DEFAULT_KEY32 "A4A86F7D7E119BA3F0CD06881E371B989B33B6D606A863B633EF529D64544F8E" // AES-256 key (32 bytes)
 
 /* Bootloaders */
 #define VSCP_BOOTLOADER_VSCP      0x00 /* VSCP boot loader algorithm */
@@ -511,14 +670,14 @@ struct vscpMyNode {
 #define VSCP_STD_REGISTER_FIRMWARE_MAJOR    0x94
 #define VSCP_STD_REGISTER_FIRMWARE_MINOR    0x95
 #define VSCP_STD_REGISTER_FIRMWARE_SUBMINOR 0x96
-#define VSCP_STD_REGISTER_FIRMWARE_RELEASE  0x96
+#define VSCP_STD_REGISTER_FIRMWARE_RELEASE  0x96 // yes same as above
 
 #define VSCP_STD_REGISTER_BOOT_LOADER 0x97
 #define VSCP_STD_REGISTER_BUFFER_SIZE 0x98 // Deprecated
 #define VSCP_STD_REGISTER_PAGES_COUNT 0x99 // Deprecated
 
 /* Unsigned 32-bit integer for family code */
-#define VSCP_STD_REGISTER_FAMILY_CODE 0x9A
+#define VSCP_STD_REGISTER_DEVICE_FAMILY 0x9A
 
 /* Unsigned 32-bit integer for device type */
 #define VSCP_STD_REGISTER_DEVICE_TYPE 0x9E
@@ -653,12 +812,26 @@ struct vscpMyNode {
 #define VSCP_ERROR_SOCKET             61 /* Unable to create socket or other socket error*/
 #define VSCP_ERROR_PARSING            62 /* Failed to parse input */
 #define VSCP_ERROR_INVALID_FRAME      63 /* A protocol has wrong format */
-#define VSCP_ERROR_SIZE               64 /* The size is wring */
+#define VSCP_ERROR_SIZE               64 /* The size is wrong */
 #define VSCP_ERROR_NACK               65 /* NACK received */
 #define VSCP_ERROR_READ_ERROR         66 /* Error when reading data */
 #define VSCP_ERROR_READ               66 /* DUPLICATE FOR CONVENIENCE! Error when reading data */
 #define VSCP_ERROR_INVALID_CHECKSUM   67 /* Checksum is not correct */
 #define VSCP_ERROR_INTERFACE          68 /* Interface error (not defined etc) */
+#define VSCP_ERROR_INVALID_FORMAT     69 /* Format is wrong. Error in conversion */
+#define VSCP_ERROR_INVALID_CONTEXT    70 /* Context is invalid or missing */
+#define VSCP_ERROR_UNSUPPORTED        71 /* Not supported */
+#define VSCP_ERROR_UNKNOWN_COMMAND    72 /* This command is not available */
+#define VSCP_ERROR_CREDENTIALS        73 /* Invalid credentials */
+#define VSCP_ERROR_NOT_AUTHORIZED     74 /* Not authorized to do that */
+#define VSCP_ERROR_FORBIDDEN          75 /* Forbidden to do that */
+
+/*!
+  A timestamp that is less than this value is considered to be an event that should
+  have date and time set by the receiving end. This is the same as was true before
+  when all parts of datetime were set to zero.
+*/
+#define VSCP_TIMESTAMP_ONE_SECOND 1000000000 /* One second in nanoseconds */
 
 /*!
     HLO (High Level Object) type (bits 7,6,5,4)
@@ -684,66 +857,66 @@ struct vscpMyNode {
     Template for VSCP XML event data
 
     data:
-datetime,vscpHead,vscpObId,vscpDateTime,vscpTimeStamp,vscpClass,vscpType,vscpGuid,vscpData,note
+datetime,head,obid,datetime,timestamp,class,type,guid,data,note
 
 <event
-     vscpHead="3"
-     vscpObId="1234"
-     vscpDateTime="2017-01-13T10:16:02"
-     vscpTimeStamp="50817"
-     vscpClass="10"
-     vscpType="6"
-     vscpGuid="00:00:00:00:00:00:00:00:00:00:00:00:00:01:00:02"
-     vscpData="0x48,0x34,0x35,0x2E,0x34,0x36,0x34" />
+     head="3"
+     obid="1234"
+     datetime="2017-01-13T10:16:02"
+     timestamp="50817"
+     class="10"
+     type="6"
+     guid="00:00:00:00:00:00:00:00:00:00:00:00:00:01:00:02"
+     data="0x48,0x34,0x35,0x2E,0x34,0x36,0x34" />
 
  */
 #define VSCP_XML_EVENT_TEMPLATE                                                                                        \
   "<event "                                                                                                            \
-  "vscpHead=\"%d\" "                                                                                                   \
-  "vscpObId=\"%lu\" "                                                                                                  \
-  "vscpDateTime=\"%s\" "                                                                                               \
-  "vscpTimeStamp=\"%lu\" "                                                                                             \
-  "vscpClass=\"%d\" "                                                                                                  \
-  "vscpType=\"%d\" "                                                                                                   \
-  "vscpGuid=\"%s\" "                                                                                                   \
-  "vscpData=\"%s\" "                                                                                                   \
+  "head=\"%d\" "                                                                                                       \
+  "obid=\"%lu\" "                                                                                                      \
+  "datetime=\"%s\" "                                                                                                   \
+  "timestamp=\"%lu\" "                                                                                                 \
+  "class=\"%d\" "                                                                                                      \
+  "type=\"%d\" "                                                                                                       \
+  "guid=\"%s\" "                                                                                                       \
+  "data=\"%s\" "                                                                                                       \
   "/>"
 
 /*
 
     Template for VSCP JSON event data
-    data: datetime,vscpHead,vscpObId,datetime,timestamp,class,type,guid,data,note
+    data: datetime,head,obid,datetime,timestamp,class,type,guid,data,note
 
 {
-    "vscpHead": 2,
-    "vscpObId": 123,
-    "vscpDateTime": "2017-01-13T10:16:02Z",
-    "vscpTimeStamp":50817,
-    "vscpClass": 10,
-    "vscpType": 8,
-    "vscpGuid": "00:00:00:00:00:00:00:00:00:00:00:00:00:01:00:02",
-    "vscpData": [1,2,3,4,5,6,7],
-    "vscpNote": "This is some text"
+    "head": 2,
+    "obid": 123,
+    "datetime": "2017-01-13T10:16:02Z",
+    "timestamp":50817,
+    "class": 10,
+    "type": 8,
+    "guid": "00:00:00:00:00:00:00:00:00:00:00:00:00:01:00:02",
+    "data": [1,2,3,4,5,6,7],
+    "note": "This is some text"
 }
 */
 #define VSCP_JSON_EVENT_TEMPLATE                                                                                       \
   "{\n"                                                                                                                \
-  "\"vscpHead\": %d,\n"                                                                                                \
-  "\"vscpObId\":  %lu,\n"                                                                                              \
-  "\"vscpDateTime\": \"%s\",\n"                                                                                        \
-  "\"vscpTimeStamp\": %lu,\n"                                                                                          \
-  "\"vscpClass\": %d,\n"                                                                                               \
-  "\"vscpType\": %d,\n"                                                                                                \
-  "\"vscpGuid\": \"%s\",\n"                                                                                            \
-  "\"vscpData\": [%s],\n"                                                                                              \
-  "\"vscpNote\": \"%s\"\n"                                                                                             \
+  "\"head\": %d,\n"                                                                                                    \
+  "\"obid\":  %lu,\n"                                                                                                  \
+  "\"datetime\": \"%s\",\n"                                                                                            \
+  "\"timestamp\": %lu,\n"                                                                                              \
+  "\"class\": %d,\n"                                                                                                   \
+  "\"type\": %d,\n"                                                                                                    \
+  "\"guid\": \"%s\",\n"                                                                                                \
+  "\"data\": [%s],\n"                                                                                                  \
+  "\"note\": \"%s\"\n"                                                                                                 \
   "}"
 
 /*!
 
     Template for VSCP HTML event data
 
-    data: vscpDateTime,vscpClass,type,data-count,data,guid,vscpHead,vscpTimeStamp,vscpObId,note
+    data: datetime,class,type,data-count,data,guid,head,timestamp,obid,note
 
 <h2>VSCP Event</h2>
 <p>
@@ -761,10 +934,10 @@ Data: 1,2,3,4,5,6,7<br>
 From GUID: 00:00:00:00:00:00:00:00:00:00:00:00:00:01:00:02<br>
 </p>
 <p>
-vscpHead: 6 <br>
-DateTime: 2013-11-02T12:34:22Z
-Timestamp: 1234 <br>
-ObId: 1234 <br>
+vscp: 6 <br>
+datetime: 2013-11-02T12:34:22Z
+timestamp: 1234 <br>
+obid: 1234 <br>
 note: This is a note <br>
 </p>
 
@@ -772,23 +945,23 @@ note: This is a note <br>
 #define VSCP_HTML_EVENT_TEMPLATE                                                                                       \
   "<h2>VSCP Event</h2> "                                                                                               \
   "<p>"                                                                                                                \
-  "Class: %d <br>"                                                                                                     \
-  "Type: %d <br>"                                                                                                      \
+  "class: %d <br>"                                                                                                     \
+  "type: %d <br>"                                                                                                      \
   "</p>"                                                                                                               \
   "<p>"                                                                                                                \
-  "Data count: %d<br>"                                                                                                 \
-  "Data: %s<br>"                                                                                                       \
+  "data size: %d<br>"                                                                                                  \
+  "data: %s<br>"                                                                                                       \
   "</p>"                                                                                                               \
   "<p>"                                                                                                                \
-  "From GUID: %s<br>"                                                                                                  \
+  "guid: %s<br>"                                                                                                       \
   "</p>"                                                                                                               \
   "<p>"                                                                                                                \
-  "vscpHead: %d <br>"                                                                                                  \
+  "head: %d <br>"                                                                                                      \
   "<p>"                                                                                                                \
-  "DateTime: %s <br>"                                                                                                  \
+  "datetime: %s <br>"                                                                                                  \
   "</p>"                                                                                                               \
-  "Timestamp: %lu <br>"                                                                                                \
-  "ObId: %lu <br>"                                                                                                     \
+  "timestamp: %lu <br>"                                                                                                \
+  "obid: %lu <br>"                                                                                                     \
   "note: %s <br>"                                                                                                      \
   "</p>"
 
@@ -821,6 +994,140 @@ enum enumMqttMsgFormat { jsonfmt, xmlfmt, strfmt, binfmt, autofmt };
 #define VSCP_DROPLET_ALPHA 0
 #define VSCP_DROPLET_BETA  1
 #define VSCP_DROPLET_GAMMA 2
+
+// clang-format off
+
+/*!
+  Use to print GUIDs
+
+  printf("GUID is: " GUIDSTR "\n", GUID2STR(pEvent->GUID));
+*/
+#ifndef GUID2STR
+#define GUID2STR(a)                                                                                                    \
+  (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],  \
+    (a)[14], (a)[15]
+#define GUIDSTR "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
+#endif
+
+// ----------------------------------------------------------------
+// 64-bit user rights bit array that is used by VSCP clients to determine 
+// what a user is allowed to do and not do. The rights are defined in the 
+// following way:
+//------------------------------------------------------------------
+
+// Rights nibble 7
+#define VSCP_USER_RIGHT_ALLOW_TEST          0x0000000010000000
+#define VSCP_USER_RIGHT_ALLOW_INTERFACE     0x0000000020000000
+#define VSCP_USER_RIGHT_ALLOW_RESTART       0x0000000040000000
+#define VSCP_USER_RIGHT_ALLOW_SHUTDOWN      0x0000000080000000
+
+// Rights nibble 6
+#define VSCP_USER_RIGHT_ALLOW_SETFILTER     0x0000000004000000
+#define VSCP_USER_RIGHT_ALLOW_SETGUID       0x0000000008000000
+
+// Rights nibble 5
+#define VSCP_USER_RIGHT_ALLOW_RCV_EVENT     0x0000000000100000  // Allowed to receive events
+
+// Rights nibble 4
+#define VSCP_USER_RIGHT_ALLOW_SEND_EVENT    0x0000000000010000  // Allowed to send events
+#define VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT                                \
+    0x0000000000020000 // Allowed to send Level I protocol events
+#define VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT                                \
+    0x0000000000040000 // Allowed to send Level 2 protocol events
+#define VSCP_USER_RIGHT_ALLOW_SEND_HLO_EVENT                                   \
+    0x0000000000080000 // Allowed to send HLO event(s)
+
+// Rights nibble 3
+
+
+// Rights nibble 2
+
+
+// Rights nibble 0/1
+#define VSCP_USER_RIGHT_ALLOW_TCPIP      0x0000000000000001
+#define VSCP_USER_RIGHT_ALLOW_WEBSOCKETS 0x0000000000000002  // ws1/ws2
+#define VSCP_USER_RIGHT_ALLOW_WEB        0x0000000000000004  // Web interface
+#define VSCP_USER_RIGHT_ALLOW_REST       0x0000000000000008  // REST
+#define VSCP_USER_RIGHT_ALLOW_UDP        0x0000000000000010  // UDP clienty
+#define VSCP_USER_RIGHT_ALLOW_MQTT       0x0000000000000020  // MQTT
+#define VSCP_USER_RIGHT_ALLOW_MULTICAST  0x0000000000000040  // Multicast
+
+// "admin" has all rights.
+// "user" standard user rights
+// "driver" can send and receive events and log in to tcp/ip through local host
+
+// Default admin privilege
+#define VSCP_ADMIN_DEFAULT_RIGHTS 0xFFFFFFFFFFFFFFFF    // Can do everything (and more)
+
+// Default user privilege
+#define VSCP_USER_DEFAULT_RIGHTS                                               \
+        VSCP_USER_RIGHT_ALLOW_TCPIP |                                          \
+        VSCP_USER_RIGHT_ALLOW_WEBSOCKETS |                                     \
+        VSCP_USER_RIGHT_ALLOW_WEB |                                            \
+        VSCP_USER_RIGHT_ALLOW_REST |                                           \
+        VSCP_USER_RIGHT_ALLOW_UDP |                                            \
+        VSCP_USER_RIGHT_ALLOW_MULTICAST |                                      \
+        VSCP_USER_RIGHT_ALLOW_MQTT |                                           \
+        VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                     \
+        VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                      \
+        VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                              \
+        VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT
+
+#define VSCP_DRIVER_DEFAULT_RIGHTS                                             \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT
+
+#define VSCP_TCPIP_DEFAULT_RIGHTS                                              \
+      VSCP_USER_RIGHT_ALLOW_TCPIP |                                            \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT 
+
+#define VSCP_WEBSOCKETS_DEFAULT_RIGHTS                                         \
+      VSCP_USER_RIGHT_ALLOW_WEBSOCKETS |                                       \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT
+
+#define VSCP_WEB_DEFAULT_RIGHTS                                                \
+      VSCP_USER_RIGHT_ALLOW_WEB |                                              \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT
+
+#define VSCP_REST_DEFAULT_RIGHTS                                               \
+      VSCP_USER_RIGHT_ALLOW_REST |                                             \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT
+
+#define VSCP_UDP_DEFAULT_RIGHTS                                                \
+      VSCP_USER_RIGHT_ALLOW_UDP |                                              \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT      
+
+#define VSCP_MULTICAST_DEFAULT_RIGHTS                                          \
+      VSCP_USER_RIGHT_ALLOW_MULTICAST |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT  
+
+#define VSCP_MQTT_DEFAULT_RIGHTS                                               \
+      VSCP_USER_RIGHT_ALLOW_MQTT |                                             \
+      VSCP_USER_RIGHT_ALLOW_SEND_EVENT |                                       \
+      VSCP_USER_RIGHT_ALLOW_RCV_EVENT |                                        \
+      VSCP_USER_RIGHT_ALLOW_SEND_L1CTRL_EVENT |                                \
+      VSCP_USER_RIGHT_ALLOW_SEND_L2CTRL_EVENT
+// clang-format on
 
 #ifdef __cplusplus
 }

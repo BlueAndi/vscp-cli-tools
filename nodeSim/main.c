@@ -1,6 +1,6 @@
 /* The MIT License (MIT)
  *
- * Copyright (c) 2014 - 2025 Andreas Merkle
+ * Copyright (c) 2014 - 2026 Andreas Merkle
  * http://www.blue-andi.de
  * vscp@blue-andi.de
  *
@@ -56,7 +56,7 @@ This module contains the main entry point.
 #include "vscp_ps.h"
 #include "vscp_thread.h"
 #include "temperature_sim.h"
-#include "vscphelperlib.h"
+#include "vscphelper_compat.h"
 #include "lamp_sim.h"
 
 /*******************************************************************************
@@ -81,7 +81,7 @@ This module contains the main entry point.
 #define MAIN_PROG_NAME          "VSCP level 1 node"
 
 /** Copyright */
-#define MAIN_COPYRIGHT          "(c) 2014 - 2025 Andreas Merkle"
+#define MAIN_COPYRIGHT          "(c) 2014 - 2026 Andreas Merkle"
 
 /** Persistent memory filename */
 #define MAIN_EEPROM_FILENAME    "eeprom.asc"

@@ -5,7 +5,7 @@
 //
 // The MIT License (MIT)
 //
-// Copyright © 2000-2021 Ake Hedman, The VSCP Project, 
+// Copyright (C) 2000-2026 Åke Hedman and contributors, The VSCP Project, 
 // <akhe@vscp.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -43,7 +43,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 HELPERLIB_API long 
 vscphlp_newSession(void);
@@ -134,7 +133,7 @@ vscphlp_getVSCPtypeFromCANALid( const unsigned long id );
 HELPERLIB_API unsigned char 
 vscphlp_getVSCPnicknameFromCANALid( const unsigned long id );
 HELPERLIB_API unsigned long 
-vscphlp_getCANALidFromdata( const unsigned char priority,
+vscphlp_getCANALidFromData( const unsigned char priority,
                               const unsigned short vscp_class,
                               const unsigned short vscp_type );
 HELPERLIB_API unsigned long 
@@ -155,6 +154,8 @@ HELPERLIB_API int
 vscphlp_getGuidFromStringEx( vscpEventEx *pEvent, const char * pGUID );
 HELPERLIB_API int 
 vscphlp_getGuidFromStringToArray( uint8_t *pGUID, const char * pStr );
+HELPERLIB_API int 
+vscphlp_parseGuid(uint8_t* pGUID, const char* pStr);
 HELPERLIB_API int 
 vscphlp_writeGuidToString( const vscpEvent *pEvent, char *pStr, size_t len );
 HELPERLIB_API int 
@@ -191,7 +192,7 @@ vscphlp_deleteVSCPevent( vscpEvent *pEvent );
 HELPERLIB_API void 
 vscphlp_deleteVSCPevent_v2( vscpEvent **ppEvent );
 HELPERLIB_API void 
-vscphlp_deleteVSCPeventEx( vscpEventEx *pEventEx );
+vscphlp_deleteVSCPeventEx( vscpEventEx **pEventEx );
 HELPERLIB_API void 
 vscphlp_clearVSCPFilter( vscpEventFilter *pFilter );
 HELPERLIB_API void 
@@ -209,17 +210,17 @@ vscphlp_doLevel2Filter( const vscpEvent *pEvent,
                                const vscpEventFilter *pFilter );
 HELPERLIB_API int 
 vscphlp_convertCanalToEvent( vscpEvent *pvscpEvent,
-                              const canalMsg *pcanalMsg,
+                              const struct canalMsg *pcanalMsg,
                               unsigned char *pGUID );
 HELPERLIB_API int 
 vscphlp_convertCanalToEventEx( vscpEventEx *pvscpEvent,
-                                const canalMsg *pcanalMsg,
+                                const struct canalMsg *pcanalMsg,
                                  unsigned char *pGUID );
 HELPERLIB_API int 
-vscphlp_convertEventToCanal( canalMsg *pcanalMsg,
+vscphlp_convertEventToCanal( struct canalMsg *pcanalMsg,
                               const vscpEvent *pvscpEvent );
 HELPERLIB_API int 
-vscphlp_convertEventExToCanal( canalMsg *pcanalMsg,
+vscphlp_convertEventExToCanal( struct canalMsg *pcanalMsg,
                                 const vscpEventEx *pvscpEventEx );
 HELPERLIB_API unsigned long 
 vscphlp_makeTimeStamp( void );
@@ -231,8 +232,8 @@ HELPERLIB_API int
 vscphlp_copyVSCPEvent( vscpEvent *pEventTo,
                         const vscpEvent *pEventFrom );
 HELPERLIB_API int 
-vscphlp_writeVscpDataToString( const vscpEvent *pEvent,
-                                char *pstr,
+vscphlp_writeVscpDataToString( char *pstr,
+                                const vscpEvent *pEvent,
                                 size_t len,
                                 int bUseHtmlBreak );
 HELPERLIB_API int
