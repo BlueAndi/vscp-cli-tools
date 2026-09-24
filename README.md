@@ -66,13 +66,13 @@ More information can be found on the main site [http://www.vscp.org](http://www.
 The [vscp-framework](https://github.com/BlueAndi/vscp-framework) is added as git submodule. Therefore use:
 
 ```bash
-$ git clone --recursive https://github.com/BlueAndi/vscp-cli-tools.git
+git clone --recursive https://github.com/BlueAndi/vscp-cli-tools.git
 ```
 
 If already cloned and just a update of the vscp-framework shall be done, use:
 
 ```bash
-$ git submodule update --remote
+git submodule update --remote
 ```
 
 ### 2 Choose Project
