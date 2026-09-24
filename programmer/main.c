@@ -48,7 +48,7 @@ This module contains the main entry point.
 #include <time.h>
 #include "log.h"
 #include "platform.h"
-#include "vscphelperlib.h"
+#include "vscphelper_compat.h"
 #include "cmdLineParser.h"
 #include "intelHexParser.h"
 #include "crc16ccitt.h"

@@ -56,7 +56,7 @@ This module contains the main entry point.
 #include "vscp_ps.h"
 #include "vscp_thread.h"
 #include "temperature_sim.h"
-#include "vscphelperlib.h"
+#include "vscphelper_compat.h"
 #include "lamp_sim.h"
 
 /*******************************************************************************

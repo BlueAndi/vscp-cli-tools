@@ -33,7 +33,7 @@
 ################################################################################
 
 # Software version
-VERSION= 3.0.0
+VERSION= 3.1.0
 
 # Binary file name
 BIN= vscpProgrammerPc
@@ -72,16 +72,18 @@ BUILDOS= linux
 endif
 
 # Library search path (-L...)
-LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE)
+LIBPATH= -L../common/vscphelper/lib/$(BUILDOS)
 
 # Libraries (-l...)
-LIBRARIES= -lm -lvscphelper -lexpat
+LIBRARIES= -lm -lexpat
 
 # Windows specific part
 ifeq ($(OS),Windows_NT)
-LIBRARIES+= -lws2_32
+# The VSCP helper library is shipped without an import library,
+# therefore link directly against the DLL.
+LIBRARIES+= -l:libvscphelper15.dll -lws2_32
 else
-LIBRARIES+= -ldl -lssl
+LIBRARIES+= -lvscphelper15 -ldl
 endif
 
 # Preprocessor defines
@@ -100,8 +102,12 @@ CFLAGS= -Wall -ffunction-sections -fdata-sections -fshort-enums -std=gnu99 -funs
 # -Wl,-Map,foo.map  : Create map file
 # -Wl,--cref        : Add cross reference to map file
 # -Wl,--gc-sections : Enable garbage collection of unused input sections
-# -Wl,-rpath='$$ORIGIN/../lib/linux' : Set shared object search path
+# -Wl,-rpath,'$$ORIGIN' : Search shared objects next to the binary
 LDFLAGS= -Wall -Wl,-Map,$(BINDIR)/$(BIN).map -Wl,--cref -Wl,--gc-sections
+
+ifneq ($(OS),Windows_NT)
+LDFLAGS+= -Wl,-rpath,'$$ORIGIN'
+endif
 
 ifeq ($(MAKECMDGOALS),debug)
 
@@ -119,9 +125,6 @@ CFLAGS+= -g -O1
 # -fprofile-arcs  : Enable profiling
 LDFLAGS+=
 
-# The flag indicates in the name of the DLL whether its a release or debug version
-DLLFLAG= d
-
 endif
 
 ifeq ($(MAKECMDGOALS),release)
@@ -137,9 +140,6 @@ CFLAGS+= -Os
 # -fprofile-arcs  : Enable profiling
 LDFLAGS+=
 
-# The flag indicates in the name of the DLL whether its a release or debug version
-DLLFLAG=
-
 endif
 
 # Object directory
@@ -149,7 +149,7 @@ OBJDIR= obj
 BINDIR= bin
 
 # Library directory
-LIBDIR= ../common/vscphelper/lib/$(BUILDOS)/$(BUILDTYPE)
+LIBDIR= ../common/vscphelper/lib/$(BUILDOS)
 
 # Remove path from .c files, rename to .o files and add object directory
 OBJECTS= $(addprefix $(OBJDIR)/,$(notdir $(SOURCES:%.c=%.o)))
@@ -157,17 +157,20 @@ OBJECTS= $(addprefix $(OBJDIR)/,$(notdir $(SOURCES:%.c=%.o)))
 # All dependency files
 DEPFILES= $(OBJECTS:%.o=%.d)
 
-# DLLS
-DLLS=
+# Shared libraries which are copied next to the binary
+SHLIBS=
 
 ifeq ($(OS),Windows_NT)
 
-# DLLs
-DLLS= $(BINDIR)/libcrypto-1_1-x64.dll \
-	$(BINDIR)/libexpat$(DLLFLAG).dll \
-	$(BINDIR)/libssl-1_1-x64.dll \
+SHLIBS= $(BINDIR)/libcrypto-3-x64.dll \
+	$(BINDIR)/libexpat.dll \
+	$(BINDIR)/libssl-3-x64.dll \
 	$(BINDIR)/libvscphelper15.dll \
-	$(BINDIR)/pthreadVCE3$(DLLFLAG).dll
+	$(BINDIR)/pthreadVCE3.dll
+
+else
+
+SHLIBS= $(BINDIR)/libvscphelper15.so
 
 endif
 
@@ -208,10 +211,10 @@ help:
 	@echo "help    - This help is shown"
 	@echo ""
 	
-debug: $(BINDIR)/$(BIN).exe $(DLLS)
+debug: $(BINDIR)/$(BIN).exe $(SHLIBS)
 	@echo "Finished."
 
-release: $(BINDIR)/$(BIN).exe $(DLLS)
+release: $(BINDIR)/$(BIN).exe $(SHLIBS)
 	@echo "Finished."
 
 clean:
@@ -275,6 +278,11 @@ $(BINDIR)/$(BIN).exe: $(DEPFILES) $(OBJECTS)
 	@$(LD) $(OBJECTS) $(LDFLAGS) $(LIBPATH) $(LIBRARIES) -o $(BINDIR)/$(BIN)
 
 # Copy all necessary windows DLLs to the binary folder
-$(BINDIR)/%.dll: $(LIBDIR)/%.dll
+$(BINDIR)/%.dll: $(LIBDIR)/%.dll | $(BINDIR)
+	@echo "Copy" $< "to ./"$(BINDIR)"/"
+	@$(COPY) $< ./$(BINDIR)
+
+# Copy all necessary linux shared objects to the binary folder
+$(BINDIR)/%.so: $(LIBDIR)/%.so | $(BINDIR)
 	@echo "Copy" $< "to ./"$(BINDIR)"/"
 	@$(COPY) $< ./$(BINDIR)

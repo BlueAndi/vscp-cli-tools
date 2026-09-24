@@ -44,7 +44,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "log.h"
-#include "vscphelperlib.h"
+#include "vscphelper_compat.h"
 #include "vscp_class_l1.h"
 #include "vscp_class_l1_l2.h"
 #include "vscp_util.h"

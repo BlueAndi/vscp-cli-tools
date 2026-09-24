@@ -46,7 +46,7 @@ This module contains the main entry point.
 #include <string.h>
 #include "log.h"
 #include "platform.h"
-#include "vscphelperlib.h"
+#include "vscphelper_compat.h"
 #include "cmdLineParser.h"
 
 /*******************************************************************************
