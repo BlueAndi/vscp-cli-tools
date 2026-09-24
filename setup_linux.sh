@@ -1,31 +1,19 @@
 #!/bin/bash
 
+# The VSCP helper library itself is part of this repository, see
+# ./common/vscphelper. Only its runtime dependencies and the tool chain are
+# installed here. The -dev packages pull in the matching runtime packages.
+
+set -e
+
+echo Update package lists
+sudo apt-get update
+
+echo Install build essentials
+sudo apt-get install -y build-essential
+
 echo Install expat
-sudo apt-get install libexpat1
-sudo apt-get install libexpat1-dev
+sudo apt-get install -y libexpat1-dev
 
-echo Download and install vscp-helper-lib
-sudo wget https://github.com/grodansparadis/vscp-helper-lib/releases/download/v15.0.0/libvscphelper_15.0.0_amd64.deb
-sudo apt-get install ./libvscphelper_15.0.0_amd64.deb
-
-echo Install dependencies
-sudo apt-get install build-essential checkinstall zlib1g-dev
-
-echo Download OpenSSL
-cd /usr/local/src/
-sudo wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
-sudo tar -xf openssl-1.1.1k.tar.gz
-cd openssl-1.1.1k
-
-echo Install and compile OpenSSL
-sudo ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib
-sudo make
-sudo make test
-sudo make install
-
-echo Configure link libraries
-cd /etc/ld.so.conf.d/
-echo "/usr/local/ssl/lib" >> openssl-1.1.1k.conf
-
-echo Reload dynamic link
-sudo ldconfig -v
+echo Install OpenSSL
+sudo apt-get install -y libssl-dev
